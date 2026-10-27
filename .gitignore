@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# WorkBuddy 发布标记（含应用 ID，不适合公开）
+.wbapp_*.genie
+
+# 日志与临时文件
+*.log
+*.tmp
+
+# 本地文档（不上传）
+网址链接.docx

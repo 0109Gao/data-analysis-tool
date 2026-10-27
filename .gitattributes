@@ -1,0 +1,17 @@
+# 换行符统一为 LF：与构建脚本写出的字节保持一致，
+# 否则在 Windows 上 clone 后文件变成 CRLF，重建一次就显示「全部被改」。
+* text=auto eol=lf
+
+# 示例数据保持原字节，不参与行尾规范化
+*.csv -text
+
+# 构建产物：不计入 GitHub 的语言统计，diff 里默认折叠
+output/demo_report.html linguist-generated=true
+web/index.html          linguist-generated=true
+web/clean.js            linguist-generated=true
+web/sw.js               linguist-generated=true
+web/xlsx.js             linguist-generated=true
+
+# 二进制资源不做文本处理，避免行尾转换破坏文件
+*.png binary
+*.jpg binary

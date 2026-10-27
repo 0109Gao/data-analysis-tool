@@ -1,0 +1,3370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>__TITLE__</title>
+<style>
+  /* ============ 设计令牌 ============ */
+  :root {
+    --ink: #eef2ff;
+    --ink-soft: #c9d2ea;
+    --muted: #8e98b6;
+    --faint: #616b88;
+    --line: rgba(255, 255, 255, 0.11);
+    --a-violet: #8b5cf6;
+    --a-cyan: #22d3ee;
+    --a-pink: #f472b6;
+    --a-mint: #34d399;
+    --a-amber: #fbbf24;
+    --radius: 22px;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    padding: 22px clamp(16px, 3vw, 42px) 40px;
+    background: #04050a;
+    color: var(--ink);
+    font-family: "Inter", "Segoe UI Variable Display", "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.52;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ============ 极光背景 ============ */
+  .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+
+  .aurora .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(96px);
+    mix-blend-mode: screen;
+    will-change: transform;
+  }
+  .b1 { width: 54vw; height: 54vw; left: -12vw; top: -18vw; opacity: .55;
+        background: radial-gradient(circle at 34% 32%, #6d3bff, transparent 64%);
+        animation: drift-a 26s ease-in-out infinite alternate; }
+  .b2 { width: 46vw; height: 46vw; right: -12vw; top: -10vw; opacity: .48;
+        background: radial-gradient(circle at 62% 40%, #0ea5e9, transparent 62%);
+        animation: drift-b 31s ease-in-out infinite alternate; }
+  .b3 { width: 62vw; height: 46vw; left: 16vw; bottom: -26vw; opacity: .40;
+        background: radial-gradient(circle at 50% 50%, #ec4899, transparent 63%);
+        animation: drift-c 35s ease-in-out infinite alternate; }
+  .b4 { width: 34vw; height: 34vw; right: 4vw; bottom: -10vw; opacity: .34;
+        background: radial-gradient(circle at 50% 50%, #10b981, transparent 60%);
+        animation: drift-a 29s ease-in-out infinite alternate-reverse; }
+
+  @keyframes drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(3vw, 4vh, 0) scale(1.08); }
+  }
+  @keyframes drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1.04); }
+    to   { transform: translate3d(-4vw, 5vh, 0) scale(0.96); }
+  }
+  @keyframes drift-c {
+    from { transform: translate3d(0, 0, 0) scale(0.98); }
+    to   { transform: translate3d(2vw, -5vh, 0) scale(1.1); }
+  }
+
+  /* 极细网格 + 胶片颗粒，给纯色面板提供秩序感 */
+  .aurora .grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(120% 90% at 50% 0%, #000 10%, transparent 78%);
+    -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 10%, transparent 78%);
+    opacity: .55;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ============ 液态玻璃 ============ */
+  .glass {
+    position: relative;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background:
+      linear-gradient(155deg,
+        rgba(255, 255, 255, 0.13) 0%,
+        rgba(255, 255, 255, 0.045) 34%,
+        rgba(255, 255, 255, 0.018) 60%,
+        rgba(255, 255, 255, 0.075) 100%);
+    backdrop-filter: blur(26px) saturate(155%);
+    -webkit-backdrop-filter: blur(26px) saturate(155%);
+    box-shadow:
+      0 30px 70px -34px rgba(0, 0, 0, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      inset 0 -22px 44px -34px rgba(139, 92, 246, 0.55);
+  }
+  /* 高光：左上角镜面反射 */
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 85% at 6% -6%, rgba(255, 255, 255, 0.20), transparent 46%),
+      radial-gradient(90% 70% at 100% 108%, rgba(34, 211, 238, 0.10), transparent 52%);
+  }
+  /* 玻璃边缘：一层亚像素的亮线 */
+  .glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .shell { position: relative; z-index: 1; max-width: 1560px; margin: 0 auto; }
+
+  /* ============ 顶栏 ============ */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 14px 20px;
+    margin-bottom: 18px;
+    border-radius: 20px;
+  }
+  .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+  .mark {
+    position: relative;
+    width: 38px; height: 38px;
+    flex: 0 0 38px;
+    border-radius: 12px;
+    background: conic-gradient(from 140deg, #8b5cf6, #22d3ee, #34d399, #f472b6, #8b5cf6);
+    box-shadow: 0 10px 26px -12px rgba(139, 92, 246, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    animation: spin 22s linear infinite;
+  }
+  .mark i {
+    position: absolute; inset: 3px;
+    border-radius: 9px;
+    background: rgba(6, 8, 16, 0.82);
+    backdrop-filter: blur(4px);
+  }
+  .mark i::after {
+    content: ""; position: absolute; inset: 8px;
+    border-radius: 5px;
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.04));
+    mix-blend-mode: soft-light;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .brand-text { min-width: 0; }
+  .brand-text h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 620;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 42ch;
+  }
+  .brand-text p {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--faint);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-left: auto; }
+  .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.045);
+    font-size: 11.5px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .chip b {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+
+  .actions { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .btn {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+    color: var(--ink);
+    font: inherit;
+    font-size: 12.5px;
+    padding: 8px 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -16px rgba(139, 92, 246, 1), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+  .btn:active { transform: translateY(0); }
+  .btn.ghost { background: rgba(255, 255, 255, 0.04); color: var(--ink-soft); }
+
+  /* 工作表切换：和 ghost 按钮同一套外观，只把浏览器默认箭头换成自绘的 */
+  .sheet-pick {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 27px;
+    max-width: 190px;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 15px) 53%, calc(100% - 10px) 53%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+  .sheet-pick option { background: #171a24; color: #e8eaf2; }
+
+  /* ============ 布局 ============ */
+  .layout {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(238px, 284px) minmax(0, 1.62fr) minmax(320px, 1fr);
+    grid-template-areas:
+      "kpis kpis kpis"
+      "explorer chart corr"
+      "table table table";
+    /* 同一行的三块面板拉齐到相同高度：否则内容短的那块会在底部留一条空白 */
+    align-items: stretch;
+  }
+
+  .card { padding: 18px 20px 20px; min-width: 0; }
+  /* 三块面板必须等高、顶端齐平：任何一块单独写 height / min-height / align-self
+     都会在底部错出一道台阶。这里显式锁死，防止以后加样式时又破坏对齐。 */
+  .layout > .card { align-self: stretch; }
+
+  /* 图表卡片：占满行高，让直方图吃满剩余高度，而不是在底部留白。
+     SVG 用绝对定位，尺寸不参与卡片高度计算——否则「图表变高 → 行变高 → 图表再变高」会滚雪球。
+     四分位条留在文档流里并用 margin-top:auto 钉在卡片底部。 */
+  .card-fill { display: flex; flex-direction: column; }
+  .card-fill .chart-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direction: column; }
+  .card-fill .chart-wrap > .chart-svg { position: absolute; left: 0; top: 0; width: 100%; height: auto; }
+  .card-fill .chart-wrap > .box-strip { position: static; margin-top: auto; }
+  /* 类别很少（如布尔列只有两行）时把行距均匀铺开，别全挤在卡片顶部；
+     纯说明类内容（标识列 / 文本列）在剩余空间里居中 */
+  .card-fill .chart-wrap > .cat-list { flex: 1 1 auto; justify-content: space-evenly; }
+  .card-fill .chart-wrap > .note { margin: auto 0; }
+
+  /* 清洗摘要：只有真的做过清洗才出现（命令行 --clean / 网页点「清洗」）。
+     放在 KPI 卡最下面：读者先看「数据长什么样」，再看「我替它改了什么」。 */
+  .clean-strip {
+    margin-top: 14px;
+    padding: 12px 14px 13px;
+    border-radius: 14px;
+    border: 1px solid rgba(52, 211, 153, 0.20);
+    background: linear-gradient(120deg, rgba(52, 211, 153, 0.09), rgba(34, 211, 238, 0.05));
+  }
+  .clean-head { display: flex; align-items: center; gap: 9px; font-size: 11.5px; color: var(--ink-soft); }
+  .clean-head b { color: #6ee7b7; font-weight: 600; letter-spacing: .06em; }
+  .clean-flow { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 8px; font-size: 11.5px; color: var(--faint); }
+  .clean-flow i { font-style: normal; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .clean-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .clean-step {
+    padding: 3px 9px;
+    border-radius: 99px;
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* ============ 清洗工作台 ============ */
+  /* 摊在数据上面的一整条，不做成弹窗：清洗的每一步都会改变下面的结论，
+     用户需要一边调选项一边看见 KPI 与字段光谱怎么变。 */
+  .clean-drawer {
+    margin-bottom: 18px;
+    padding: 15px 18px 14px;
+    border-radius: 18px;
+  }
+  .clean-drawer[hidden] { display: none; }
+  body.is-empty .clean-drawer { display: none; }
+  .clean-drawer-head { display: flex; align-items: center; gap: 10px; }
+  .clean-drawer-head h2 {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .10em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .clean-drawer-head .hint { font-size: 11px; color: var(--faint); }
+  .clean-drawer-head .link-btn { margin-left: auto; }
+
+  .clean-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 22px;
+    margin-top: 12px;
+  }
+  .clean-toggles { display: flex; flex-wrap: wrap; gap: 7px; }
+  .clean-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px 5px 9px;
+    border-radius: 99px;
+    cursor: pointer;
+    font-size: 11.5px;
+    color: var(--faint);
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--line);
+    transition: background .16s ease, border-color .16s ease, color .16s ease;
+  }
+  .clean-check:hover { background: rgba(255, 255, 255, 0.07); }
+  .clean-check input { width: 13px; height: 13px; margin: 0; accent-color: var(--a-violet); }
+  /* 选中态用类名而不是 :has()：老一点的浏览器不认识 :has，勾上了却不变色更让人困惑 */
+  .clean-check.is-on {
+    color: var(--ink);
+    border-color: rgba(139, 92, 246, 0.42);
+    background: rgba(139, 92, 246, 0.15);
+  }
+
+  .clean-fields { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+  .clean-field { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--faint); }
+  .clean-field[hidden] { display: none; }
+  .clean-field select,
+  .clean-field input {
+    font: inherit;
+    font-size: 11.5px;
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color .16s ease;
+  }
+  .clean-field select:focus,
+  .clean-field input:focus { border-color: rgba(139, 92, 246, 0.55); }
+  .clean-field input { width: 92px; }
+  .clean-field select option { background: #10121c; color: var(--ink); }
+
+  .clean-actions { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  .clean-actions .btn[disabled] { opacity: .42; cursor: not-allowed; }
+  .clean-note { margin: 10px 0 0; font-size: 11px; line-height: 1.65; color: var(--faint); }
+  .clean-note b { color: var(--a-mint); font-weight: 500; }
+  .clean-note.warn b { color: var(--a-amber); }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .card-head h2 {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .10em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .card-head .hint { margin-left: auto; font-size: 11px; color: var(--faint); }
+  .card-head.sub { margin-top: 4px; }
+
+  /* ============ KPI ============ */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
+    gap: 12px;
+  }
+  .kpi {
+    position: relative;
+    overflow: hidden;
+    padding: 13px 15px 14px;
+    border-radius: 17px;
+    border: 1px solid rgba(255, 255, 255, 0.085);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.015));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+  .kpi::after {
+    content: "";
+    position: absolute;
+    right: -34px; top: -40px;
+    width: 108px; height: 108px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--glow, rgba(139, 92, 246, 0.55)), transparent 70%);
+    opacity: .62;
+    pointer-events: none;
+  }
+  .kpi-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: var(--faint);
+    text-transform: uppercase;
+  }
+  .kpi-value {
+    display: block;
+    margin-top: 5px;
+    font-size: 25px;
+    font-weight: 640;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+  }
+  .kpi-hint { display: block; margin-top: 3px; font-size: 11px; color: var(--muted); }
+
+  .insight-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .insight {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px 6px 10px;
+    border-radius: 11px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.075);
+  }
+  .insight::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--a-cyan);
+    box-shadow: 0 0 10px var(--a-cyan);
+    flex: 0 0 6px;
+  }
+  .insight[data-kind="corr"]::before { background: var(--a-violet); box-shadow: 0 0 10px var(--a-violet); }
+  .insight[data-kind="missing"]::before { background: var(--a-amber); box-shadow: 0 0 10px var(--a-amber); }
+  .insight[data-kind="category"]::before { background: var(--a-pink); box-shadow: 0 0 10px var(--a-pink); }
+
+  /* ============ 字段列表 ============ */
+  .col-search input {
+    width: 100%;
+    margin-bottom: 9px;
+    padding: 8px 11px;
+    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(8, 10, 20, 0.5);
+    color: var(--ink);
+    font: inherit;
+    font-size: 12.5px;
+    outline: none;
+    transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  .col-search input::placeholder { color: var(--faint); }
+  .col-search input:focus {
+    border-color: rgba(139, 92, 246, 0.55);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+  }
+
+  .col-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 468px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .col-list::-webkit-scrollbar { width: 6px; }
+  .col-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.13); border-radius: 99px; }
+
+  .col-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 13px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .col-item:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.075); }
+  .col-item.is-active {
+    background: linear-gradient(120deg, rgba(139, 92, 246, 0.24), rgba(34, 211, 238, 0.10));
+    border-color: rgba(139, 92, 246, 0.42);
+    box-shadow: 0 14px 30px -22px rgba(139, 92, 246, 1), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+  .col-top { display: flex; align-items: center; gap: 8px; }
+  .col-name {
+    font-size: 12.8px;
+    font-weight: 520;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .col-sub {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .col-bottom { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+  .col-bar { flex: 1; height: 3px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+  .col-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, rgba(251, 191, 36, .85), rgba(251, 113, 133, .9)); }
+
+  .badge {
+    display: inline-block;
+    flex: 0 0 auto;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background: rgba(255, 255, 255, 0.055);
+    font-size: 10.5px;
+    letter-spacing: .02em;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .badge.t-number { color: #a5b4fc; border-color: rgba(129, 140, 248, .38); background: rgba(99, 102, 241, .16); }
+  .badge.t-datetime { color: #67e8f9; border-color: rgba(34, 211, 238, .34); background: rgba(34, 211, 238, .13); }
+  .badge.t-categorical { color: #6ee7b7; border-color: rgba(52, 211, 153, .34); background: rgba(52, 211, 153, .13); }
+  .badge.t-boolean { color: #c4b5fd; border-color: rgba(196, 181, 253, .32); background: rgba(167, 139, 250, .13); }
+  .badge.t-text { color: #fcd34d; border-color: rgba(251, 191, 36, .32); background: rgba(251, 191, 36, .12); }
+  .badge.t-id { color: #f9a8d4; border-color: rgba(244, 114, 182, .32); background: rgba(244, 114, 182, .12); }
+  .badge.t-empty { color: var(--muted); }
+
+  .card-foot { margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 11px; color: var(--faint); }
+
+  /* ============ 明细面板 ============ */
+  .detail-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+  .detail-meta b { color: var(--ink-soft); font-weight: 560; }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 6px 11px;
+    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.085);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+  .pill b { font-family: var(--mono); font-size: 12.5px; color: var(--ink); font-weight: 600; }
+
+  .chart-wrap { position: relative; }
+  .chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .grid-line { stroke: rgba(255, 255, 255, 0.065); stroke-width: 1; }
+  .axis-text { fill: var(--muted); font-size: 10.5px; font-family: var(--mono); }
+  .bar { transition: opacity .15s ease; cursor: crosshair; }
+  .bar:hover { opacity: .72; }
+
+  .box-strip { margin-top: 14px; }
+
+  .cat-list { display: flex; flex-direction: column; gap: 7px; }
+  .cat-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .cat-label {
+    flex: 0 0 96px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+  }
+  .cat-track {
+    flex: 1;
+    height: 20px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.045);
+    overflow: hidden;
+    position: relative;
+  }
+  .cat-track i {
+    display: block;
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, .92), rgba(34, 211, 238, .82));
+    box-shadow: 0 0 20px -6px rgba(139, 92, 246, .9), inset 0 1px 0 rgba(255, 255, 255, .28);
+    transition: width .5s cubic-bezier(.22, .8, .3, 1);
+  }
+  .cat-val {
+    flex: 0 0 108px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .note { color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+  .note code { font-family: var(--mono); color: var(--ink-soft); }
+  .sample-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+  .sample {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 4px 9px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  /* ============ 相关性 / 缺失 ============ */
+  /* 面板宽时（两列断点下相关性卡片独占整行）矩阵撑不满，右侧会空一大片；
+     这时把「缺失分布」挪到矩阵右边并排，两边都不再留白 */
+  .card-corr { container-type: inline-size; }
+  .corr-body { display: grid; gap: 14px; }
+  .corr-side { border-top: 1px solid rgba(255, 255, 255, 0.09); padding-top: 14px; }
+  .corr-side .card-head.sub { margin-top: 0; }
+  @container (min-width: 660px) {
+    .card-corr .corr-body { grid-template-columns: minmax(0, 520px) minmax(0, 1fr); gap: 26px; align-items: start; }
+    .card-corr .corr-side { border-top: 0; padding-top: 0; border-left: 1px solid rgba(255, 255, 255, 0.09); padding-left: 24px; }
+  }
+  .corr-wrap { overflow-x: auto; }
+  /* 色标：矩阵不带图例时，颜色的「占比」只能靠猜 */
+  .corr-foot { position: sticky; left: 0; display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 10.5px; color: var(--faint); }
+  .corr-bar { height: 5px; border-radius: 99px; background: linear-gradient(90deg, rgba(251, 113, 133, 0.78), rgba(251, 113, 133, 0.06) 46%, rgba(34, 211, 238, 0.06) 54%, rgba(34, 211, 238, 0.78)); }
+  .corr-scale { display: flex; justify-content: space-between; }
+  .corr-scale i { font-style: normal; }
+  .corr-out { line-height: 1.55; }
+  .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent); margin: 16px 0 14px; }
+
+  .miss-list { display: flex; flex-direction: column; gap: 8px; }
+  .miss-row { display: flex; align-items: center; gap: 9px; font-size: 11.5px; }
+  .miss-name {
+    flex: 0 0 96px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .miss-track { flex: 1; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.055); overflow: hidden; }
+  .miss-track i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--a-amber), var(--a-pink)); }
+  .miss-val { flex: 0 0 62px; text-align: right; font-family: var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ============ 表格 ============ */
+  .table-tools { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+  .table-tools input {
+    width: 220px;
+    padding: 7px 11px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(8, 10, 20, 0.5);
+    color: var(--ink);
+    font: inherit;
+    font-size: 12.5px;
+    outline: none;
+  }
+  .table-tools input::placeholder { color: var(--faint); }
+  .table-tools input:focus { border-color: rgba(34, 211, 238, 0.5); box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12); }
+
+  .table-scroll {
+    max-height: 420px;
+    overflow: auto;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    /* 表格区域需要更高的不透明度：极光透过玻璃会削弱数字的对比度 */
+    background: rgba(7, 9, 17, 0.68);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+  }
+  .table-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+  .table-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.13); border-radius: 99px; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    text-align: left;
+    padding: 9px 13px;
+    background: rgba(12, 14, 26, 0.92);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+    color: var(--ink-soft);
+    font-weight: 560;
+    font-size: 11.5px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: #fff; }
+  thead th .sort { color: var(--faint); margin-left: 5px; font-size: 9px; }
+  /* 数值列的单元格是右对齐的，表头必须跟着右对齐，
+     否则宽列里表头贴着左边、数字贴着右边，看起来像落到了下一列下面 */
+  thead th.num { text-align: right; }
+  thead th.num .sort { margin-left: 0; margin-right: 5px; }
+  thead th[data-dir="asc"] .sort, thead th[data-dir="desc"] .sort { color: var(--a-cyan); }
+  tbody td {
+    padding: 7px 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+  }
+  tbody tr:hover td { background: rgba(139, 92, 246, 0.07); color: var(--ink); }
+  td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td .na { color: var(--faint); }
+
+  /* ============ 浮层 ============ */
+  .tip {
+    position: fixed;
+    z-index: 60;
+    padding: 6px 10px;
+    border-radius: 9px;
+    background: rgba(10, 12, 22, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--ink);
+    font-size: 11.5px;
+    font-family: var(--mono);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .13s ease, transform .13s ease;
+    box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 1);
+    white-space: nowrap;
+  }
+  .tip.show { opacity: 1; transform: translateY(0); }
+
+  .drop-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4, 5, 10, 0.62);
+    backdrop-filter: blur(6px);
+  }
+  .drop-hint.on { display: flex; }
+  .drop-hint div {
+    padding: 34px 46px;
+    border-radius: 24px;
+    border: 1px dashed rgba(139, 92, 246, 0.7);
+    background: rgba(139, 92, 246, 0.1);
+    font-size: 15px;
+    letter-spacing: .04em;
+    box-shadow: 0 0 70px -18px rgba(139, 92, 246, 0.8);
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 16px);
+    z-index: 80;
+    padding: 10px 18px;
+    border-radius: 13px;
+    background: rgba(12, 14, 26, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 12.5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 18px;
+    padding: 0 6px;
+    font-size: 11px;
+    color: var(--faint);
+    letter-spacing: .04em;
+  }
+
+  /* ============ 落地页（空状态） ============ */
+  .hero { display: none; }
+  body.is-empty .layout { display: none; }
+  /* 空状态：落地页在视口内垂直居中，不拉伸、也不在下方留白 */
+  body.is-empty .shell {
+    min-height: calc(100vh - 62px);
+    display: flex;
+    flex-direction: column;
+  }
+  body.is-empty .hero { margin: auto 0; }
+  /* 隐私入口在落地页里已经有一个，页脚不再重复 */
+  body.is-empty #privacyBtnFoot { display: none; }
+  body.is-empty .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.16fr) minmax(0, 0.84fr);
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  .hero-main {
+    padding: clamp(24px, 3.2vw, 42px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  /* .glass::before 是定位伪元素，会盖在静态文字上，
+     标题区正好落在左上高光最强处，需把内容提到高光之上 */
+  .hero-main > *, .hero-side > * { position: relative; z-index: 1; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 0 0 15px; font-size: 10.5px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--a-cyan);
+  }
+  .eyebrow::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--a-cyan); box-shadow: 0 0 14px var(--a-cyan);
+  }
+  .hero-main h2 {
+    margin: 0 0 15px;
+    font-size: clamp(23px, 2.7vw, 33px);
+    line-height: 1.26; font-weight: 650; letter-spacing: -.012em;
+  }
+  .hero-main h2 em {
+    font-style: normal;
+    background: linear-gradient(100deg, #c4b5fd 6%, #67e8f9 74%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede { margin: 0; max-width: 46ch; color: var(--ink-soft); font-size: 13.5px; line-height: 1.82; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .btn-lg { padding: 11px 20px; font-size: 13.5px; border-radius: 14px; }
+  .btn.primary {
+    background: linear-gradient(150deg, #b9a4fd, #4fe0f5);
+    border-color: rgba(255, 255, 255, .34);
+    color: #0a0712; font-weight: 650;
+    box-shadow: 0 16px 34px -20px rgba(139, 92, 246, 1), inset 0 1px 0 rgba(255, 255, 255, .5);
+  }
+  .hero-facts {
+    list-style: none; margin: 26px 0 0; padding: 20px 0 0;
+    border-top: 1px solid var(--line); display: grid; gap: 11px;
+  }
+  .hero-facts li {
+    display: grid; grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px; font-size: 12.5px; color: var(--muted); line-height: 1.65;
+  }
+  .hero-facts b { color: var(--ink-soft); font-weight: 600; }
+
+  .hero-side { display: flex; flex-direction: column; gap: 12px; }
+  .hero-card {
+    padding: 17px 19px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, .09);
+    background: linear-gradient(160deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .012));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+    /* 三张卡等分填充，避免右栏底部留下大块空洞 */
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .hero-card .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em; color: var(--faint); }
+  .hero-card h3 { margin: 5px 0 6px; font-size: 13.5px; font-weight: 600; }
+  .hero-card p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.72; }
+  .hero-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; padding: 2px 4px; margin-top: auto; font-size: 11.5px; color: var(--faint);
+  }
+  .link-btn {
+    appearance: none; border: 0; background: none; padding: 0;
+    color: var(--a-cyan); font: inherit; font-size: 11.5px; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+    text-decoration-color: rgba(34, 211, 238, .42);
+  }
+  .link-btn:hover { color: #7de8ff; }
+
+  /* ============ 告警条 ============ */
+  .warn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .warn-row:not(:empty) { margin-top: 12px; }
+  .warn-chip {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 6px 11px; border-radius: 11px;
+    font-size: 11.5px; line-height: 1.5;
+    border: 1px solid rgba(251, 191, 36, .3);
+    background: rgba(251, 191, 36, .10);
+    color: #f7e2b0;
+  }
+  .warn-chip.info {
+    border-color: rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .045);
+    color: var(--muted);
+  }
+  .warn-chip .act {
+    appearance: none; cursor: pointer; white-space: nowrap;
+    border: 1px solid rgba(251, 191, 36, .48);
+    background: rgba(251, 191, 36, .18);
+    color: #ffeaba; font: inherit; font-size: 11px;
+    padding: 2px 9px; border-radius: 8px;
+  }
+  .warn-chip .act:hover { background: rgba(251, 191, 36, .3); }
+
+  /* ============ 分析进度 ============ */
+  .progress {
+    position: fixed; left: 0; right: 0; top: 0; height: 2px;
+    z-index: 70; background: rgba(255, 255, 255, .05);
+    display: none; pointer-events: none;
+  }
+  .progress.on { display: block; }
+  .progress span {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, #8b5cf6, #22d3ee);
+    transition: width .2s ease;
+  }
+
+  /* ============ 说明弹层 ============ */
+  .modal {
+    position: fixed; inset: 0; z-index: 80;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    background: rgba(3, 4, 9, .74);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .modal[hidden] { display: none; }
+  .modal-panel {
+    width: min(620px, 100%); max-height: min(78vh, 720px);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 17px 20px 13px; border-bottom: 1px solid var(--line);
+  }
+  .modal-head h2 {
+    margin: 0; font-size: 12px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .modal-x {
+    margin-left: auto; appearance: none; cursor: pointer;
+    width: 28px; height: 28px; border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, .13);
+    background: rgba(255, 255, 255, .05);
+    color: var(--ink-soft); font-size: 15px; line-height: 1;
+  }
+  .modal-body {
+    padding: 8px 20px 24px; overflow: auto;
+    font-size: 12.8px; line-height: 1.82; color: var(--ink-soft);
+  }
+  .modal-body h4 {
+    margin: 18px 0 6px; font-size: 12.5px;
+    color: var(--ink); letter-spacing: .03em;
+  }
+  .modal-body h4:first-child { margin-top: 10px; }
+  .modal-body p { margin: 0 0 8px; }
+  .modal-body ul { margin: 0 0 8px; padding-left: 18px; }
+  .modal-body li { margin-bottom: 5px; }
+  .modal-body strong { color: var(--ink); font-weight: 600; }
+  .modal-body .fine { color: var(--faint); font-size: 11.5px; }
+  .foot-right { display: inline-flex; align-items: center; gap: 14px; }
+
+  @media (max-width: 1220px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas:
+        "kpis kpis"
+        "explorer chart"
+        "corr corr"
+        "table table";
+    }
+  }
+  @media (max-width: 880px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "kpis" "chart" "explorer" "corr" "table";
+    }
+    body.is-empty .hero { grid-template-columns: minmax(0, 1fr); margin: 18px 0 0; }
+    .hero-facts li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .hero-main h2 { font-size: clamp(21px, 6vw, 27px); }
+    .topbar { flex-wrap: wrap; }
+    /* 窄屏下品牌文字与按钮抢位置：副标题直接收起，主标题过长时省略 */
+    .brand, .brand-text { min-width: 0; }
+    .brand-text p { display: none; }
+    .brand-text h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chips { order: 3; width: 100%; margin-left: 0; }
+    .col-list { max-height: 260px; }
+    .table-tools { width: 100%; margin-left: 0; }
+    .table-tools input { width: 100%; }
+    .card-head { flex-wrap: wrap; }
+    .foot { flex-direction: column; gap: 6px; }
+    .foot-right { justify-content: space-between; width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aurora .blob, .mark { animation: none; }
+    * { transition-duration: .01ms !important; }
+  }
+
+  /* 不支持 backdrop-filter 时（旧版 Safari / 低端安卓 WebView），
+     模糊会整体失效，玻璃面板会退化成近乎透明的白框、文字直接压在极光上。
+     这里提高底不透明度，保证可读性优先于质感。 */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass { background: rgba(14, 17, 28, 0.94); }
+    .table-scroll { background: rgba(8, 10, 18, 0.96); }
+  }
+
+  /* 打印 / 导出 PDF：极光与玻璃在纸面上只会变成一团深色和模糊噪声，
+     这里整套切换为浅底深字，并解除面板的高度限制，避免表格被截断。 */
+  @media print {
+    :root {
+      --ink: #14161d; --ink-soft: #333a4d; --muted: #5a6478;
+      --faint: #7a8397; --line: rgba(0, 0, 0, 0.14);
+    }
+    body { background: #fff; color: var(--ink); padding: 0; }
+    .aurora, .drop-hint, .table-tools, .chips, .foot, #fileInput,
+    .hero, .progress, .modal { display: none !important; }
+    /* 空状态在纸面上没有意义，打印时恢复面板（内容为占位） */
+    body.is-empty .layout { display: grid !important; }
+    .warn-chip { border-color: rgba(0, 0, 0, .18) !important; background: #fdf7e6 !important; color: #4a3a10 !important; }
+    .glass, .card, .kpi, .col-item, .table-scroll {
+      background: #fff !important;
+      border-color: rgba(0, 0, 0, 0.14) !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    .glass::before, .glass::after, .kpi::after, .mark::after { display: none !important; }
+    .card { break-inside: avoid; page-break-inside: avoid; }
+    .col-item.is-active {
+      background: #eef0f6 !important;
+      border-color: rgba(0, 0, 0, 0.22) !important;
+    }
+    .table-scroll { max-height: none !important; overflow: visible !important; }
+    th { background: #f3f4f7 !important; color: #333a4d !important; }
+    td, .kpi-value, .col-name { color: #14161d !important; }
+    .kpi-label, .kpi-hint, .note, .hint { color: #5a6478 !important; }
+  }
+</style>
+__HEAD_EXTRA__
+</head>
+<body>
+<div class="aurora" aria-hidden="true">
+  <span class="blob b1"></span>
+  <span class="blob b2"></span>
+  <span class="blob b3"></span>
+  <span class="blob b4"></span>
+  <span class="grid"></span>
+</div>
+
+<div class="shell">
+  <header class="topbar glass">
+    <div class="brand">
+      <div class="mark"><i></i></div>
+      <div class="brand-text">
+        <h1 id="docTitle">__TITLE__</h1>
+        <p>本地分析 · 数据不上传</p>
+      </div>
+    </div>
+    <div class="chips" id="metaChips"></div>
+    <div class="actions">
+      <button class="btn ghost" id="demoBtn" type="button">示例数据</button>
+      <label class="btn ghost" for="fileInput">导入数据</label>
+      <input id="fileInput" type="file" accept=".csv,.tsv,.txt,.json,.jsonl,.ndjson,.xlsx,.xlsm" hidden />
+      <select class="btn ghost sheet-pick" id="sheetSelect" aria-label="选择工作表" hidden></select>
+      <button class="btn ghost" id="cleanBtn" type="button" hidden disabled>清洗</button>
+      <button class="btn" id="btnExport" type="button">导出画像</button>
+    </div>
+  </header>
+
+  <section class="hero" id="hero" aria-label="产品介绍">
+    <div class="hero-main glass">
+      <p class="eyebrow">本地优先 · 数据不外传</p>
+      <h2>把一张表拖进来，<br /><em>十秒</em>看清它的结构</h2>
+      <p class="lede">自动判定每个字段的类型，算出分布、缺失、重复与相关性，并明确指出哪些结论<strong>不可轻信</strong>。解析全部发生在你自己的浏览器里——不上传、不落盘，关掉页面即清空。</p>
+      <div class="hero-actions">
+        <label class="btn primary btn-lg" for="fileInput">选择文件</label>
+        <button class="btn btn-lg ghost" id="heroDemoBtn" type="button">先用示例数据看看</button>
+      </div>
+      <ul class="hero-facts">
+        <li><b>支持格式</b><span>Excel（.xlsx / .xlsm）· CSV / TSV / TXT · JSON / JSONL，自动嗅探分隔符与编码（UTF-8 · GBK · Big5 · UTF-16）</span></li>
+        <li><b>数据规模</b><span>单次最多 50 万行；逐列分析，界面不会冻结</span></li>
+        <li><b>使用门槛</b><span>免安装、免注册；也能装到桌面或手机离线使用</span></li>
+      </ul>
+    </div>
+    <div class="hero-side">
+      <div class="hero-card">
+        <span class="k">01</span>
+        <h3>字段体检</h3>
+        <p>数值、时间、布尔、类别、文本、标识——按取值形态判定，不看列名，脏格式也能读懂。</p>
+      </div>
+      <div class="hero-card">
+        <span class="k">02</span>
+        <h3>分布与相关性</h3>
+        <p>直方图、四分位条带、类别占比、皮尔逊相关系数热力图，全部以原生 SVG 绘制，无图表库依赖。</p>
+      </div>
+      <div class="hero-card">
+        <span class="k">03</span>
+        <h3>把坑标出来</h3>
+        <p>缺失、重复、常量列、日期歧义都会显式提示，不给你一份「看着正常但错了」的报告。</p>
+      </div>
+      <div class="hero-foot">
+        <span>数据只在本机浏览器内处理</span>
+        <button class="link-btn" id="privacyBtn" type="button">处理方式与边界</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 清洗工作台：默认收起。清洗改的是内存里的副本，原始文件一个字节都不动 -->
+  <section class="clean-drawer glass" id="cleanDrawer" aria-label="数据清洗" hidden>
+    <div class="clean-drawer-head">
+      <h2>数据清洗</h2>
+      <span class="hint">只改内存里的这份副本，原始文件不动；四个开关默认只做不改变含义的动作</span>
+      <button class="link-btn" id="cleanClose" type="button">收起</button>
+    </div>
+    <div class="clean-form">
+      <div class="clean-toggles">
+        <label class="clean-check is-on"><input type="checkbox" id="optTrim" checked /><span>去首尾空白</span></label>
+        <label class="clean-check is-on"><input type="checkbox" id="optDropBlank" checked /><span>删空行</span></label>
+        <label class="clean-check is-on"><input type="checkbox" id="optDedupe" checked /><span>去重</span></label>
+        <label class="clean-check is-on"><input type="checkbox" id="optCoerce" checked /><span>数字写法归一</span></label>
+      </div>
+      <div class="clean-fields">
+        <label class="clean-field"><span>缺失值</span>
+          <select id="cleanFill">
+            <option value="none">不处理，保留空缺</option>
+            <option value="drop">删除含缺失的行</option>
+            <option value="mean">均值填补</option>
+            <option value="median">中位数填补</option>
+            <option value="mode">众数填补</option>
+            <option value="ffill">用上一行的值填补</option>
+            <option value="value">固定值填补</option>
+          </select>
+        </label>
+        <label class="clean-field" id="cleanValueField" hidden><span>固定值</span>
+          <input id="cleanValue" type="text" maxlength="40" placeholder="例如 0 或 待补" />
+        </label>
+        <label class="clean-field"><span>异常值</span>
+          <select id="cleanOutliers">
+            <option value="none">不处理</option>
+            <option value="flag">只标记，追加 _异常 列</option>
+            <option value="drop">剔除所在行</option>
+          </select>
+        </label>
+      </div>
+      <div class="clean-actions">
+        <button class="btn primary" id="cleanApply" type="button">执行清洗</button>
+        <button class="btn ghost" id="cleanReset" type="button" disabled>还原原始数据</button>
+        <button class="btn ghost" id="cleanDownload" type="button" disabled>下载清洗后 CSV</button>
+      </div>
+    </div>
+    <p class="clean-note" id="cleanNote"></p>
+  </section>
+
+  <main class="layout">
+    <section class="card glass" style="grid-area: kpis">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="insight-row" id="insightRow"></div>
+      <div class="warn-row" id="warnRow"></div>
+      <div class="clean-strip" id="cleanStrip" hidden></div>
+    </section>
+
+    <section class="card glass" style="grid-area: explorer">
+      <div class="card-head">
+        <h2>字段光谱</h2>
+        <span class="hint" id="colCount"></span>
+      </div>
+      <div class="col-search"><input id="colSearch" type="search" placeholder="搜索字段…" /></div>
+      <div class="col-list" id="colList"></div>
+      <div class="card-foot" id="typeLegend">点击字段查看其分布画像</div>
+    </section>
+
+    <section class="card glass card-fill" style="grid-area: chart">
+      <div class="card-head">
+        <h2 id="detailName">字段分布</h2>
+        <span class="badge" id="detailBadge">—</span>
+        <span class="hint" id="detailHint"></span>
+      </div>
+      <div class="detail-meta" id="detailMeta"></div>
+      <div class="pills" id="detailPills"></div>
+      <div class="chart-wrap" id="detailChart"></div>
+    </section>
+
+    <section class="card glass card-corr" style="grid-area: corr">
+      <div class="card-head">
+        <h2>相关性矩阵</h2>
+        <span class="hint">皮尔逊系数</span>
+      </div>
+      <div class="corr-body">
+        <div class="corr-main">
+          <div class="corr-wrap" id="corrChart"></div>
+        </div>
+        <div class="corr-side">
+          <div class="card-head sub">
+            <h2>缺失分布</h2>
+            <span class="hint">按缺失率</span>
+          </div>
+          <div class="miss-list" id="missChart"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card glass" style="grid-area: table">
+      <div class="card-head">
+        <h2>数据预览</h2>
+        <div class="table-tools">
+          <input id="tableFilter" type="search" placeholder="在当前预览行中筛选…" />
+          <span class="hint" id="tableHint"></span>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>数据分析工具 · 纯 Python 标准库引擎 · 图表以原生 SVG 绘制，无外部依赖</span>
+    <span class="foot-right">
+      <button class="link-btn" id="privacyBtnFoot" type="button">处理方式与边界</button>
+      <span id="buildStamp"></span>
+    </span>
+  </footer>
+</div>
+
+<div class="progress" id="progress" aria-hidden="true"><span></span></div>
+<div class="drop-hint" id="dropHint"><div>松开以导入表格</div></div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-panel glass" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h2 id="modalTitle">数据是怎么处理的</h2>
+      <button class="modal-x" id="modalClose" type="button" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script id="payload" type="application/json">__PAYLOAD__</script>
+<script>
+(function () {
+  "use strict";
+
+  var TYPE_META = {
+    number: { label: "数值", cls: "t-number" },
+    datetime: { label: "时间", cls: "t-datetime" },
+    categorical: { label: "类别", cls: "t-categorical" },
+    boolean: { label: "布尔", cls: "t-boolean" },
+    text: { label: "文本", cls: "t-text" },
+    id: { label: "标识", cls: "t-id" },
+    empty: { label: "空列", cls: "t-empty" }
+  };
+
+  var state = {
+    data: null,
+    selected: null,
+    sort: null,
+    query: "",
+    colQuery: "",
+    /* 上一次解析结果，用于切换日期顺序后原地重算，不必让用户再选一次文件 */
+    parsed: null,
+    dateOrder: "dmy",
+    /* 清洗：options 是当前面板上的选择，cleaned 是上一次清洗的产物。
+       面板收起/展开、反复调参都不影响 parsed——原始数据始终留着，随时能还原。 */
+    clean: { trim: true, drop_blank: true, dedupe: true, coerce: true, fill: "none", fill_value: "", outliers: "none" },
+    cleaned: null,
+    /* Excel：原始字节留着，切换工作表时不必让用户重新选文件 */
+    excelBuffer: null,
+    excelName: "",
+    currentSheet: "",
+    /* 读取层的提示（跳过了标题行、自动换了工作表），随警告区一起展示 */
+    readNotes: []
+  };
+  /* 浏览器端一次分析的硬上限。超过则截断并明确告知，而不是静默变慢。 */
+  var MAX_ANALYZE_ROWS = 500000;
+
+  function $(selector, root) { return (root || document).querySelector(selector); }
+
+  /* ------------------------------------------------------------------ */
+  /* 格式化                                                              */
+  /* ------------------------------------------------------------------ */
+  function esc(value) {
+    return String(value === null || value === undefined ? "" : value).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  function compact(x) {
+    if (x === null || x === undefined || !isFinite(x)) return "—";
+    var a = Math.abs(x);
+    if (a >= 1e8) return (x / 1e8).toFixed(2) + "亿";
+    if (a >= 1e4) return (x / 1e4).toFixed(1) + "万";
+    if (a >= 1000) return Math.round(x).toString();
+    if (a >= 10) return String(Math.round(x * 10) / 10);
+    if (a >= 1) return String(Math.round(x * 100) / 100);
+    if (a === 0) return "0";
+    return x.toPrecision(3);
+  }
+
+  function decimal(x, digits) {
+    if (x === null || x === undefined || !isFinite(x)) return "—";
+    return Number(x).toFixed(digits === undefined ? 2 : digits);
+  }
+
+  function pct(x) {
+    if (x === null || x === undefined || !isFinite(x)) return "—";
+    return (x * 100).toFixed(1) + "%";
+  }
+
+  function intText(x) {
+    if (x === null || x === undefined) return "—";
+    return Number(x).toLocaleString("zh-CN");
+  }
+
+  function clip(text, limit) {
+    var s = String(text === null || text === undefined ? "" : text);
+    return s.length > limit ? s.slice(0, limit - 1) + "…" : s;
+  }
+
+  function niceTicks(max, count) {
+    if (!(max > 0)) return [0, 1];
+    var raw = max / count;
+    var magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+    var normalized = raw / magnitude;
+    var factor = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+    var step = factor * magnitude;
+    var ticks = [];
+    for (var value = 0; value < max + step * 0.999; value += step) ticks.push(value);
+    return ticks;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 解析与类型推断（与 Python 引擎保持一致的判定规则）                    */
+  /* ------------------------------------------------------------------ */
+  var MISSING = ["", "na", "n/a", "nan", "null", "none", "nil", "-", "--", "—", "?", "#n/a"];
+  var TRUE_SET = ["true", "yes", "y", "t", "是", "对", "真"];
+  var FALSE_SET = ["false", "no", "n", "f", "否", "错", "假"];
+
+  function isMissing(value) {
+    if (value === null || value === undefined) return true;
+    return MISSING.indexOf(String(value).trim().toLowerCase()) >= 0;
+  }
+
+  function parseNum(value) {
+    if (value === null || value === undefined) return null;
+    var s = String(value).trim();
+    if (!s) return null;
+    var percent = s.charAt(s.length - 1) === "%";
+    if (percent) s = s.slice(0, -1);
+    s = s.replace(/[,\s_]/g, "").replace(/[¥￥$€£]/g, "");
+    if (s.charAt(0) === "(" && s.charAt(s.length - 1) === ")") s = "-" + s.slice(1, -1);
+    if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(s)) return null;
+    var x = parseFloat(s);
+    if (!isFinite(x)) return null;
+    return percent ? x / 100 : x;
+  }
+
+  var DATE_PATTERNS = [
+    /^\d{4}-\d{1,2}-\d{1,2}([ T]\d{1,2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/,
+    /^\d{4}\/\d{1,2}\/\d{1,2}([ T]\d{1,2}:\d{2}(:\d{2})?)?$/,
+    /^\d{4}-\d{1,2}$/,
+    /^\d{4}\/\d{1,2}$/,
+    /^\d{4}年\d{1,2}月(\d{1,2}日)?$/,
+    /^\d{8}$/,
+    /^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/
+  ];
+
+  /* 两段都可能是月份的写法：01/05/2026 到底是 1 月 5 日还是 5 月 1 日，
+     取决于数据来源的地区。这里按 state.dateOrder 解析，并在列画像上标注歧义数，
+     让使用者自己确认——工具不替他猜。 */
+  var AMBIGUOUS_DATE = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function parseDate(value, order) {
+    var s = String(value).trim();
+    var dayOrder = (order || state.dateOrder) === "dmy";
+    var amb = AMBIGUOUS_DATE.exec(s);
+    if (amb) {
+      var a = parseInt(amb[1], 10), b = parseInt(amb[2], 10), y = parseInt(amb[3], 10);
+      var first = dayOrder ? { d: a, m: b } : { d: b, m: a };
+      var second = dayOrder ? { d: b, m: a } : { d: a, m: b };
+      var stamp = Date.parse(y + "-" + pad2(first.m) + "-" + pad2(first.d));
+      if (!isNaN(stamp) && checkYmd(y, first.m, first.d)) return stamp;
+      // 声明顺序构造出的日期非法（如 25 月），退回另一种解释，避免整列被打成文本
+      if (checkYmd(y, second.m, second.d)) return Date.parse(y + "-" + pad2(second.m) + "-" + pad2(second.d));
+      return null;
+    }
+    var matched = false;
+    for (var i = 0; i < DATE_PATTERNS.length; i++) {
+      if (DATE_PATTERNS[i].test(s)) { matched = true; break; }
+    }
+    if (!matched) return null;
+    var norm = s.replace(/[年月]/g, "-").replace(/日/g, "");
+    if (/^\d{8}$/.test(norm)) norm = norm.slice(0, 4) + "-" + norm.slice(4, 6) + "-" + norm.slice(6, 8);
+    if (/^\d{4}-\d{1,2}$/.test(norm)) norm += "-01";
+    if (/^\d{4}\/\d{1,2}$/.test(norm)) norm += "/01";
+    norm = norm.replace(/\//g, "-").replace(" ", "T");
+    /* Date.parse 会把 2026-02-31 这类不存在的日期静默滚到 3 月 3 日，
+       等于替数据编了一个不存在的日子。构造前先校验真实存在。 */
+    var iso = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(norm);
+    if (iso && !checkYmd(parseInt(iso[1], 10), parseInt(iso[2], 10), parseInt(iso[3], 10))) return null;
+    var parsed = Date.parse(norm);
+    return isNaN(parsed) ? null : parsed;
+  }
+
+  /* Date.parse 会把 2026-02-31 归一到 3 月，构造前先校验真实存在 */
+  function checkYmd(y, m, d) {
+    if (!(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) return false;
+    var probe = new Date(y, m - 1, d);
+    return probe.getFullYear() === y && probe.getMonth() === m - 1 && probe.getDate() === d;
+  }
+
+  /* 统计有多少取值在两种日期顺序下都成立（两段都 ≤ 12 且不相等） */
+  function dateOrderAmbiguity(raw) {
+    var count = 0;
+    for (var i = 0; i < raw.length; i++) {
+      if (isMissing(raw[i])) continue;
+      var m = AMBIGUOUS_DATE.exec(String(raw[i]).trim());
+      if (!m) continue;
+      var a = parseInt(m[1], 10), b = parseInt(m[2], 10), y = parseInt(m[3], 10);
+      if (a === b || a > 12 || b > 12) continue;
+      if (checkYmd(y, b, a) && checkYmd(y, a, b)) count++;
+    }
+    return count;
+  }
+
+  function parseBool(value) {
+    var s = String(value).trim().toLowerCase();
+    if (TRUE_SET.indexOf(s) >= 0) return true;
+    if (FALSE_SET.indexOf(s) >= 0) return false;
+    return null;
+  }
+
+  function minMax(values) {
+    var low = Infinity, high = -Infinity;
+    for (var i = 0; i < values.length; i++) {
+      var v = values[i];
+      if (v < low) low = v;
+      if (v > high) high = v;
+    }
+    return [low, high];
+  }
+
+  function quantile(sorted, q) {
+    if (!sorted.length) return null;
+    if (sorted.length === 1) return sorted[0];
+    var pos = (sorted.length - 1) * q;
+    var lo = Math.floor(pos), hi = Math.ceil(pos);
+    if (lo === hi) return sorted[lo];
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+
+  function binCount(n) { return Math.max(8, Math.min(24, Math.round(Math.sqrt(Math.max(n, 1)) * 1.6))); }
+
+  function numericHist(values) {
+    var mm = minMax(values), low = mm[0], high = mm[1];
+    if (!(high > low)) return { labels: [compact(low)], counts: [values.length], edges: [low, high] };
+    var bins = binCount(values.length), width = (high - low) / bins;
+    var counts = new Array(bins).fill(0);
+    for (var i = 0; i < values.length; i++) {
+      var idx = Math.floor((values[i] - low) / width);
+      if (idx >= bins) idx = bins - 1;
+      if (idx < 0) idx = 0;
+      counts[idx] += 1;
+    }
+    var labels = [], edges = [];
+    for (var j = 0; j < bins; j++) { labels.push(compact(low + width * j)); edges.push(low + width * j); }
+    edges.push(high);
+    return { labels: labels, counts: counts, edges: edges };
+  }
+
+  function discreteHist(values) {
+    var tallyMap = new Map();
+    for (var i = 0; i < values.length; i++) {
+      var key = Math.trunc(values[i]);
+      tallyMap.set(key, (tallyMap.get(key) || 0) + 1);
+    }
+    var keys = Array.from(tallyMap.keys()).sort(function (a, b) { return a - b; });
+    return {
+      labels: keys.map(String),
+      counts: keys.map(function (key) { return tallyMap.get(key); }),
+      edges: keys.map(function (key) { return key - 0.5; }).concat([keys[keys.length - 1] + 0.5]),
+      discrete: true
+    };
+  }
+
+  function dateLabel(stamp, spanDays) {
+    var d = new Date(stamp);
+    var pad = function (n) { return n < 10 ? "0" + n : String(n); };
+    if (spanDays > 540) return d.getFullYear() + "-" + pad(d.getMonth() + 1);
+    if (spanDays > 45) return pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    return pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function dateHist(stamps) {
+    var mm = minMax(stamps), low = mm[0], high = mm[1];
+    if (!(high > low)) {
+      return { labels: [dateLabel(low, 0)], counts: [stamps.length], edges: [low, high] };
+    }
+    var spanDays = (high - low) / 86400000;
+    var bins = binCount(stamps.length), width = (high - low) / bins;
+    var counts = new Array(bins).fill(0);
+    for (var i = 0; i < stamps.length; i++) {
+      var idx = Math.floor((stamps[i] - low) / width);
+      if (idx >= bins) idx = bins - 1;
+      if (idx < 0) idx = 0;
+      counts[idx] += 1;
+    }
+    var labels = [], edges = [];
+    for (var j = 0; j < bins; j++) {
+      labels.push(dateLabel(low + width * j, spanDays));
+      edges.push(low + width * j);
+    }
+    edges.push(high);
+    return { labels: labels, counts: counts, edges: edges };
+  }
+
+  function tally(values) {
+    var map = new Map();
+    for (var i = 0; i < values.length; i++) {
+      var key = String(values[i]);
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    var list = [];
+    map.forEach(function (count, key) { list.push([key, count]); });
+    list.sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); });
+    return list;
+  }
+
+  function profileColumn(name, raw) {
+    var total = raw.length, kept = [], keptIndex = [], missing = 0;
+    for (var i = 0; i < raw.length; i++) {
+      if (isMissing(raw[i])) missing++;
+      else { kept.push(raw[i]); keptIndex.push(i); }
+    }
+    var uniqueSet = new Set();
+    for (var u = 0; u < kept.length; u++) uniqueSet.add(String(kept[u]));
+
+    var profile = {
+      name: name, type: "empty", total: total, missing: missing,
+      unique: uniqueSet.size, stats: {}, hist: null, top: [],
+      samples: kept.slice(0, 6).map(function (v) { return clip(String(v), 120); })
+    };
+    if (!kept.length) return { profile: profile, series: null };
+
+    var numericPairs = [], numericOk = 0;
+    for (var a = 0; a < kept.length; a++) {
+      var num = parseNum(kept[a]);
+      if (num !== null) { numericOk++; numericPairs.push([keptIndex[a], num]); }
+    }
+    if (numericOk / kept.length >= 0.95) {
+      var numbers = numericPairs.map(function (pair) { return pair[1]; });
+      var sorted = numbers.slice().sort(function (x, y) { return x - y; });
+      var mean = numbers.reduce(function (s, v) { return s + v; }, 0) / numbers.length;
+      var variance = 0;
+      for (var b = 0; b < numbers.length; b++) variance += Math.pow(numbers[b] - mean, 2);
+      profile.type = "number";
+      profile.stats = {
+        min: sorted[0], max: sorted[sorted.length - 1], mean: mean,
+        median: quantile(sorted, 0.5), q1: quantile(sorted, 0.25), q3: quantile(sorted, 0.75),
+        sum: numbers.reduce(function (s, v) { return s + v; }, 0),
+        std: numbers.length > 1 ? Math.sqrt(variance / (numbers.length - 1)) : 0
+      };
+      var allInteger = numbers.every(function (value) { return Number.isInteger(value); });
+      profile.hist = allInteger && uniqueSet.size <= 24 ? discreteHist(numbers) : numericHist(numbers);
+      if (uniqueSet.size <= 20) {
+        profile.top = tally(kept).slice(0, 8).map(function (pair) {
+          return { value: pair[0], count: pair[1] };
+        });
+      }
+      var map = {};
+      for (var c = 0; c < numericPairs.length; c++) map[numericPairs[c][0]] = numericPairs[c][1];
+      return { profile: profile, series: map };
+    }
+
+    var stamps = [], dateOk = 0;
+    for (var d = 0; d < kept.length; d++) {
+      var stamp = parseDate(kept[d]);
+      if (stamp !== null) { dateOk++; stamps.push(stamp); }
+    }
+    if (dateOk / kept.length >= 0.95) {
+      var ordered = stamps.slice().sort(function (x, y) { return x - y; });
+      profile.type = "datetime";
+      profile.stats = {
+        min: dateLabel(ordered[0], 0), max: dateLabel(ordered[ordered.length - 1], 0),
+        spanDays: (ordered[ordered.length - 1] - ordered[0]) / 86400000,
+        count: stamps.length
+      };
+      var ambiguous = dateOrderAmbiguity(kept);
+      if (ambiguous) {
+        profile.note = { kind: "date-order", ambiguous: ambiguous, order: state.dateOrder };
+      }
+      profile.hist = dateHist(stamps);
+      return { profile: profile, series: null };
+    }
+
+    var boolOk = 0, truthy = 0;
+    for (var e = 0; e < kept.length; e++) {
+      var flag = parseBool(kept[e]);
+      if (flag !== null) { boolOk++; if (flag) truthy++; }
+    }
+    if (boolOk / kept.length >= 0.95) {
+      profile.type = "boolean";
+      profile.stats = { trueCount: truthy, falseCount: kept.length - truthy, trueRate: truthy / kept.length };
+      profile.top = [{ value: "true", count: truthy }, { value: "false", count: kept.length - truthy }];
+      return { profile: profile, series: null };
+    }
+
+    if (kept.length >= 8 && uniqueSet.size === kept.length) {
+      profile.type = "id";
+      profile.stats = { unique: kept.length, fullyUnique: true };
+      return { profile: profile, series: null };
+    }
+
+    if (uniqueSet.size <= 40 || uniqueSet.size / kept.length <= 0.4) {
+      var counted = tally(kept);
+      profile.type = "categorical";
+      profile.stats = { topShare: counted.length ? counted[0][1] / kept.length : null };
+      profile.top = counted.slice(0, 12).map(function (pair) { return { value: pair[0], count: pair[1] }; });
+      return { profile: profile, series: null };
+    }
+
+    var lengths = kept.map(function (v) { return String(v).length; });
+    profile.type = "text";
+    profile.stats = {
+      avgLength: lengths.reduce(function (s, v) { return s + v; }, 0) / lengths.length,
+      maxLength: Math.max.apply(null, lengths)
+    };
+    return { profile: profile, series: null };
+  }
+
+  function pearson(mapA, mapB) {
+    var keys = [];
+    for (var key in mapA) {
+      if (Object.prototype.hasOwnProperty.call(mapA, key) && Object.prototype.hasOwnProperty.call(mapB, key)) keys.push(key);
+    }
+    var n = keys.length;
+    if (n < 3) return null;
+    var xs = keys.map(function (k) { return mapA[k]; });
+    var ys = keys.map(function (k) { return mapB[k]; });
+    var mx = xs.reduce(function (s, v) { return s + v; }, 0) / n;
+    var my = ys.reduce(function (s, v) { return s + v; }, 0) / n;
+    var sxx = 0, syy = 0, sxy = 0;
+    for (var i = 0; i < n; i++) {
+      var dx = xs[i] - mx, dy = ys[i] - my;
+      sxx += dx * dx; syy += dy * dy; sxy += dx * dy;
+    }
+    if (sxx <= 0 || syy <= 0) return null;
+    return sxy / Math.sqrt(sxx * syy);
+  }
+
+  /* 逐列分析并在列与列之间让出主线程。
+     整个分析同步跑完会把界面冻住，用户以为页面崩了；
+     按列切分后浏览器有机会重绘，进度条能真实推进。 */
+  function yieldToUi() {
+    return new Promise(function (resolve) { setTimeout(resolve, 0); });
+  }
+
+  async function analyze(columns, rows, meta, onProgress) {
+    var profiles = [], seriesMap = {}, missingTotal = 0;
+    for (var index = 0; index < columns.length; index++) {
+      var name = columns[index];
+      var raw = rows.map(function (row) { return row[index] === undefined ? "" : row[index]; });
+      var result = profileColumn(name, raw);
+      missingTotal += result.profile.missing;
+      profiles.push(result.profile);
+      if (result.series) seriesMap[name] = result.series;
+      if (onProgress) onProgress(index + 1, columns.length);
+      if (index < columns.length - 1) await yieldToUi();
+    }
+
+    var labels = Object.keys(seriesMap).slice(0, 10);
+    var matrix = labels.map(function (left) {
+      return labels.map(function (right) {
+        var value = pearson(seriesMap[left], seriesMap[right]);
+        return value === null ? null : Math.round(value * 10000) / 10000;
+      });
+    });
+
+    var seen = new Set(), duplicates = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var key = rows[i].join("\u0001");
+      if (seen.has(key)) duplicates++; else seen.add(key);
+    }
+
+    var cells = rows.length * columns.length;
+    var warnings = collectWarnings(profiles, rows.length);
+    var payload = {
+      meta: {
+        title: meta.title || (meta.source + " · 数据分析"),
+        source: meta.source,
+        engine: meta.engine || "browser",
+        generated: new Date().toLocaleString("zh-CN", { hour12: false }),
+        rows: rows.length,
+        cols: columns.length,
+        dateOrder: state.dateOrder
+      },
+      quality: {
+        missingTotal: missingTotal, cells: cells,
+        // 与 Python 引擎保持同一份数据契约：都保留 4 位小数
+        completeness: cells ? Math.round((1 - missingTotal / cells) * 10000) / 10000 : 1,
+        duplicateRows: duplicates,
+        warnings: warnings.length
+      },
+      warnings: warnings,
+      columns: profiles,
+      correlation: { labels: labels, matrix: matrix },
+      insights: buildInsights(profiles, labels, matrix, rows.length, missingTotal),
+      preview: {
+        columns: columns.slice(),
+        rows: rows.slice(0, 40).map(function (row) { return row.map(function (cell) { return cell === null || cell === undefined ? "" : String(cell); }); }),
+        total: rows.length
+      }
+    };
+    /* 清洗记录跟着 payload 走：报告在哪儿，账本就在哪儿。
+       不单独存一份，是为了避免「导出的画像里没有清洗痕迹」这种事后说不清的情况。 */
+    if (meta.cleaning) payload.cleaning = meta.cleaning;
+    return payload;
+  }
+
+  /* 与 Python 侧 _collect_warnings 保持同一套判据：
+     这些提示的共同点是程序不会报错，只会让报告「看起来正常但结论偏了」。 */
+  function collectWarnings(profiles, rowCount) {
+    var out = [];
+    var label = function (order) { return order === "mdy" ? "月/日" : "日/月"; };
+    profiles.forEach(function (profile) {
+      var note = profile.note;
+      if (note && note.kind === "date-order") {
+        var current = label(note.order), other = current === "日/月" ? "月/日" : "日/月";
+        out.push({
+          level: "warn", kind: "date-order", column: profile.name,
+          ambiguous: note.ambiguous, order: note.order,
+          message: "「" + profile.name + "」有 " + note.ambiguous + " 个日期两种读法都成立，当前按 " +
+            current + " 解释；若数据实际是 " + other + "，最值会整体偏移"
+        });
+      }
+      if (profile.type === "empty") {
+        out.push({ level: "info", kind: "empty-column", column: profile.name,
+          message: "「" + profile.name + "」整列为空，已跳过画像" });
+      } else if (profile.unique === 1 && rowCount > 1) {
+        out.push({ level: "info", kind: "constant-column", column: profile.name,
+          message: "「" + profile.name + "」只有一个取值，无法参与相关性分析" });
+      } else if (rowCount > 0 && profile.missing && profile.missing / rowCount >= 0.4) {
+        out.push({ level: "warn", kind: "high-missing", column: profile.name,
+          message: "「" + profile.name + "」缺失率 " + (profile.missing / rowCount * 100).toFixed(1) + "%，基于该列的结论需谨慎" });
+      }
+    });
+    return out;
+  }
+
+  function buildInsights(profiles, labels, matrix, rows, missingTotal) {
+    var insights = [], best = null;
+    for (var i = 0; i < labels.length; i++) {
+      for (var j = i + 1; j < labels.length; j++) {
+        var value = matrix[i][j];
+        if (value === null) continue;
+        if (!best || Math.abs(value) > Math.abs(best[0])) best = [value, labels[i], labels[j]];
+      }
+    }
+    if (best && Math.abs(best[0]) >= 0.5) {
+      insights.push({
+        kind: "corr",
+        text: "最强线性关系：" + best[1] + " 与 " + best[2] + " 呈" + (best[0] > 0 ? "正相关" : "负相关") +
+          "（皮尔逊系数 " + best[0].toFixed(2) + "）"
+      });
+    }
+    var withMissing = profiles.filter(function (p) { return p.missing > 0; }).sort(function (a, b) {
+      return b.missing / Math.max(b.total, 1) - a.missing / Math.max(a.total, 1);
+    });
+    if (withMissing.length) {
+      var head = withMissing[0];
+      insights.push({
+        kind: "missing",
+        text: "缺失最集中的列是 " + head.name + "，缺失 " + head.missing + " 格（" +
+          ((head.missing / Math.max(head.total, 1)) * 100).toFixed(1) + "%）"
+      });
+    } else if (rows) {
+      insights.push({ kind: "missing", text: "全部单元格均有值，未检测到缺失。" });
+    }
+    var cats = profiles.filter(function (p) { return p.type === "categorical"; });
+    if (cats.length) {
+      var target = cats[0];
+      cats.forEach(function (p) { if ((p.stats.topShare || 0) > (target.stats.topShare || 0)) target = p; });
+      if (target.top.length) {
+        insights.push({
+          kind: "category",
+          text: target.name + " 的取值最集中：" + target.top[0].value + " 占 " +
+            ((target.stats.topShare || 0) * 100).toFixed(1) + "%"
+        });
+      }
+    }
+    var numerics = profiles.filter(function (p) { return p.type === "number"; });
+    if (numerics.length) {
+      insights.push({ kind: "shape", text: "共识别出 " + numerics.length + " 个数值列，可参与相关性计算与趋势对比。" });
+    }
+    return insights;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* CSV / JSON 解析                                                     */
+  /* ------------------------------------------------------------------ */
+  function detectDelimiter(text) {
+    var line = text.split(/\r?\n/, 1)[0] || "";
+    var candidates = [",", "\t", ";", "|"];
+    var best = ",", bestCount = -1;
+    candidates.forEach(function (mark) {
+      var count = line.split(mark).length - 1;
+      if (count > bestCount) { bestCount = count; best = mark; }
+    });
+    return bestCount > 0 ? best : ",";
+  }
+
+  function parseDelimited(text, delimiter) {
+    var rows = [], row = [], cell = "", quoted = false, i = 0;
+    text = text.replace(/^\uFEFF/, "");
+    while (i < text.length) {
+      var ch = text[i];
+      if (quoted) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { cell += '"'; i += 2; continue; }
+          quoted = false; i++; continue;
+        }
+        cell += ch; i++; continue;
+      }
+      if (ch === '"') {
+        // 只有出现在字段开头的引号才是包裹符；` "x" ` 这种前面带空格的引号
+        // 按 RFC 4180 属于普通字符，直接剥掉会静默改掉用户的原值
+        if (cell.length === 0) { quoted = true; i++; continue; }
+        cell += ch; i++; continue;
+      }
+      if (ch === delimiter) { row.push(cell); cell = ""; i++; continue; }
+      // \r\n 算一个换行；单独的 \r 也算换行（旧版 Mac / 部分系统导出就是这种）
+      if (ch === "\r") {
+        row.push(cell); rows.push(row); row = []; cell = "";
+        i += text[i + 1] === "\n" ? 2 : 1;
+        continue;
+      }
+      if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; i++; continue; }
+      cell += ch; i++;
+    }
+    if (cell.length || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (record) {
+      return record.some(function (value) { return String(value).trim() !== ""; });
+    });
+  }
+
+  function uniqueHeaders(headers) {
+    var seen = {}, out = [];
+    headers.forEach(function (header, index) {
+      var name = String(header).trim() || "col_" + (index + 1);
+      if (Object.prototype.hasOwnProperty.call(seen, name)) {
+        seen[name] += 1;
+        name = name + "_" + seen[name];
+      } else {
+        seen[name] = 0;
+      }
+      out.push(name);
+    });
+    return out;
+  }
+
+  /* 记录数组 → {columns, rows}。JSON 与 JSONL 共用同一套判定，
+     否则同一种数据换个扩展名就会得出两套列名。 */
+  function recordsToTable(records) {
+    if (!records.length) throw new Error("JSON 需为非空数组");
+    var asText = function (v) {
+      if (v === null || v === undefined) return "";
+      return typeof v === "object" ? JSON.stringify(v) : String(v);
+    };
+    if (records[0] && typeof records[0] === "object" && !Array.isArray(records[0])) {
+      var keys = [];
+      records.forEach(function (record) {
+        if (record && typeof record === "object" && !Array.isArray(record)) {
+          Object.keys(record).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); });
+        }
+      });
+      var body = records.map(function (record) {
+        var object = record && typeof record === "object" && !Array.isArray(record) ? record : {};
+        return keys.map(function (k) { return asText(object[k]); });
+      });
+      return { columns: keys, rows: body };
+    }
+    var matrix = records.map(function (record) {
+      if (!Array.isArray(record)) return [asText(record)];
+      return record.map(asText);
+    });
+    var width = 0;
+    matrix.forEach(function (line) { if (line.length > width) width = line.length; });
+    matrix = matrix.map(function (line) {
+      for (var i = line.length; i < width; i++) line.push("");
+      return line;
+    });
+    var columns = [];
+    for (var i = 0; i < width; i++) columns.push("col_" + (i + 1));
+    return { columns: columns, rows: matrix };
+  }
+
+  function parseText(text, fileName) {
+    if (/\.json$/i.test(fileName)) {
+      var parsed = JSON.parse(text);
+      if (parsed && !Array.isArray(parsed)) {
+        ["rows", "data", "records", "items"].some(function (key) {
+          if (Array.isArray(parsed[key])) { parsed = parsed[key]; return true; }
+          return false;
+        });
+      }
+      if (!Array.isArray(parsed) || !parsed.length) throw new Error("JSON 需为非空数组");
+      return recordsToTable(parsed);
+    }
+    // 每行一个 JSON 的变体：日志导出、接口批量导出最常见的就是这个格式。
+    // 它若按分隔文本解析，会得到 ['{"a":1', 'b:2}'] 这种垃圾列名，不报错也没法用。
+    if (/\.(jsonl|ndjson)$/i.test(fileName)) {
+      var list = [];
+      text.split(/\r?\n/).forEach(function (line, index) {
+        var trimmed = line.trim();
+        if (!trimmed) return;
+        try {
+          list.push(JSON.parse(trimmed));
+        } catch (error) {
+          throw new Error("第 " + (index + 1) + " 行不是完整的 JSON。.jsonl 要求每行一个 JSON 对象");
+        }
+      });
+      if (!list.length) throw new Error("文件内容为空：.jsonl 里没有一行 JSON");
+      return recordsToTable(list);
+    }
+    var records = parseDelimited(text, detectDelimiter(text));
+    if (!records.length) throw new Error("文件内容为空");
+    var header = uniqueHeaders(records[0]);
+    if (records.length === 1) throw new Error("只有表头，没有数据行");
+    var bodyRows = records.slice(1).map(function (record) {
+      var line = [];
+      for (var i = 0; i < header.length; i++) line.push(record[i] === undefined ? "" : record[i]);
+      return line;
+    });
+    return { columns: header, rows: bodyRows };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 渲染：顶部信息                                                       */
+  /* ------------------------------------------------------------------ */
+  function renderMeta(data) {
+    var meta = data.meta, quality = data.quality;
+    /* 站点版：顶栏标题恒为站点名，文件名交给右侧「来源」标签显示；
+       单文件报告没有站点名，仍用「文件名 · 数据分析」作为标题。 */
+    var pageName = SITE_NAME || meta.title || "数据分析";
+    $("#docTitle").textContent = pageName;
+    document.title = pageName;
+    var chips = [
+      ["来源", clip(meta.source, 26)],
+      ["行", intText(meta.rows)],
+      ["列", intText(meta.cols)],
+      ["完整度", pct(quality.completeness)],
+      ["引擎", meta.engine === "browser" ? "浏览器" : "Python"]
+    ];
+    $("#metaChips").innerHTML = chips.map(function (pair) {
+      return '<span class="chip">' + esc(pair[0]) + "<b>" + esc(pair[1]) + "</b></span>";
+    }).join("");
+    $("#buildStamp").textContent =
+      "生成于 " + meta.generated + (buildLabel() ? " · " + buildLabel() : "");
+  }
+
+  function renderKPIs(data) {
+    var quality = data.quality, meta = data.meta;
+    var numerics = data.columns.filter(function (c) { return c.type === "number"; }).length;
+    var tiles = [
+      { label: "数据行", value: intText(meta.rows), hint: "记录总数", glow: "rgba(139,92,246,.6)" },
+      { label: "字段数", value: intText(meta.cols), hint: numerics + " 个数值列", glow: "rgba(34,211,238,.55)" },
+      { label: "单元格", value: compact(quality.cells), hint: "缺失 " + intText(quality.missingTotal), glow: "rgba(52,211,153,.5)" },
+      { label: "完整度", value: pct(quality.completeness), hint: "非空占比", glow: "rgba(251,191,36,.5)" },
+      { label: "重复行", value: intText(quality.duplicateRows), hint: "整行完全一致", glow: "rgba(244,114,182,.55)" }
+    ];
+    $("#kpiGrid").innerHTML = tiles.map(function (tile) {
+      return '<div class="kpi" style="--glow:' + tile.glow + '">' +
+        '<span class="kpi-label">' + esc(tile.label) + "</span>" +
+        '<strong class="kpi-value">' + esc(tile.value) + "</strong>" +
+        '<span class="kpi-hint">' + esc(tile.hint) + "</span></div>";
+    }).join("");
+
+    $("#insightRow").innerHTML = (data.insights || []).map(function (item) {
+      return '<span class="insight" data-kind="' + esc(item.kind) + '">' + esc(item.text) + "</span>";
+    }).join("");
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 渲染：字段列表                                                       */
+  /* ------------------------------------------------------------------ */
+  function renderExplorer(data) {
+    var query = state.colQuery.trim().toLowerCase();
+    var list = data.columns.filter(function (col) {
+      return !query || col.name.toLowerCase().indexOf(query) >= 0;
+    });
+    $("#colCount").textContent = data.columns.length + " 个字段";
+    $("#colList").innerHTML = list.length ? list.map(function (col) {
+      var meta = TYPE_META[col.type] || TYPE_META.text;
+      var rate = col.total ? col.missing / col.total : 0;
+      return '<button class="col-item' + (col.name === state.selected ? " is-active" : "") + '" data-col="' + esc(col.name) + '">' +
+        '<span class="col-top"><span class="col-name">' + esc(col.name) + "</span>" +
+        '<span class="col-sub">' + intText(col.unique) + "</span></span>" +
+        '<span class="col-bottom"><span class="badge ' + meta.cls + '">' + meta.label + "</span>" +
+        '<span class="col-bar"><i style="width:' + (rate * 100).toFixed(2) + '%"></i></span></span>' +
+        "</button>";
+    }).join("") : '<p class="note">没有匹配的字段。</p>';
+
+    var counts = {};
+    data.columns.forEach(function (col) { counts[col.type] = (counts[col.type] || 0) + 1; });
+    $("#typeLegend").textContent = Object.keys(counts).map(function (type) {
+      return (TYPE_META[type] || TYPE_META.text).label + " " + counts[type];
+    }).join(" · ");
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 渲染：字段明细                                                       */
+  /* ------------------------------------------------------------------ */
+  function pillList(items) {
+    return '<div class="pills">' + items.map(function (pair) {
+      return '<span class="pill">' + esc(pair[0]) + "<b>" + esc(pair[1]) + "</b></span>";
+    }).join("") + "</div>";
+  }
+
+  function histogramSVG(hist, total, accent, unit, fit) {
+    var counts = hist.counts || [], labels = hist.labels || [];
+    if (!counts.length) return '<p class="note">无可绘制的数据。</p>';
+    var W = 760, H = 300, padL = 52, padR = 14, padT = 16, padB = 44;
+    // fit 存在时按「卡片剩余高度」反解 viewBox 高度：渲染高度 = 宽度 × H / W，
+    // 这样直方图能长到填满卡片，而不是把多余空间空在底下
+    if (fit && fit.width > 0 && fit.height > 0) {
+      H = Math.round((fit.height * W) / fit.width);
+      H = Math.max(260, Math.min(H, 820));
+    }
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var maxCount = 0;
+    counts.forEach(function (c) { if (c > maxCount) maxCount = c; });
+    maxCount = Math.max(maxCount, 1);
+    var ticks = niceTicks(maxCount, 4);
+    var top = ticks[ticks.length - 1] || maxCount;
+    var slot = plotW / counts.length;
+    var barW = Math.max(3, slot * 0.66);
+    var gradId = "g" + Math.random().toString(36).slice(2, 8);
+    var parts = [];
+
+    parts.push('<svg class="chart-svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="分布直方图">');
+    parts.push('<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="' + accent + '" stop-opacity="0.95"/>' +
+      '<stop offset="1" stop-color="' + accent + '" stop-opacity="0.24"/></linearGradient></defs>');
+
+    ticks.forEach(function (tick) {
+      var y = padT + plotH - (tick / top) * plotH;
+      parts.push('<line class="grid-line" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"/>');
+      parts.push('<text class="axis-text" x="' + (padL - 10) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + esc(compact(tick)) + "</text>");
+    });
+
+    counts.forEach(function (count, index) {
+      var height = (count / top) * plotH;
+      var x = padL + slot * index + (slot - barW) / 2;
+      var y = padT + plotH - height;
+      var tip = (labels[index] || "") + " · " + count + unit + (total ? "（" + ((count / total) * 100).toFixed(1) + "%）" : "");
+      parts.push('<rect class="bar" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) +
+        '" height="' + Math.max(height, 1).toFixed(1) + '" rx="' + Math.min(5, barW / 2).toFixed(1) +
+        '" fill="url(#' + gradId + ')" data-tip="' + esc(tip) + '"/>');
+    });
+
+    parts.push('<line class="grid-line" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + (padT + plotH) + '" y2="' + (padT + plotH) + '" stroke="rgba(255,255,255,.16)"/>');
+
+    var step = Math.max(1, Math.ceil(counts.length / 9));
+    labels.forEach(function (label, index) {
+      if (index % step !== 0 && index !== labels.length - 1) return;
+      var cx = padL + slot * index + slot / 2;
+      parts.push('<text class="axis-text" x="' + cx.toFixed(1) + '" y="' + (padT + plotH + 22) + '" text-anchor="middle">' + esc(clip(label, 10)) + "</text>");
+    });
+
+    parts.push("</svg>");
+    return parts.join("");
+  }
+
+  function boxStrip(stats) {
+    var values = [stats.min, stats.max, stats.q1, stats.q3, stats.median];
+    var valid = values.every(function (value) { return typeof value === "number" && isFinite(value); });
+    if (!valid || !(stats.max > stats.min)) return "";
+    var W = 760, H = 92, padL = 52, padR = 52, axisY = 40;
+    var pos = function (value) {
+      return padL + ((value - stats.min) / (stats.max - stats.min)) * (W - padL - padR);
+    };
+    var boxLeft = pos(stats.q1), boxRight = pos(stats.q3);
+    var boxWidth = Math.max(boxRight - boxLeft, 3);
+    var parts = ['<svg class="chart-svg box-strip" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="四分位分布">'];
+    var tipBox = "下四分位 " + decimal(stats.q1) + " → 上四分位 " + decimal(stats.q3) + "（中位数 " + decimal(stats.median) + "）";
+    var tipLine = "全域 " + compact(stats.min) + " → " + compact(stats.max);
+
+    parts.push('<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + axisY + '" y2="' + axisY + '" stroke="rgba(255,255,255,.18)" stroke-width="1"/>');
+    parts.push('<line x1="' + pos(stats.min).toFixed(1) + '" x2="' + pos(stats.max).toFixed(1) + '" y1="' + axisY + '" y2="' + axisY + '" stroke="rgba(255,255,255,.30)" stroke-width="1.5" data-tip="' + esc(tipLine) + '"/>');
+    parts.push('<rect x="' + boxLeft.toFixed(1) + '" y="' + (axisY - 12) + '" width="' + boxWidth.toFixed(1) + '" height="24" rx="7" fill="rgba(139,92,246,.30)" stroke="rgba(167,139,250,.7)" data-tip="' + esc(tipBox) + '"/>');
+    parts.push('<line x1="' + pos(stats.median).toFixed(1) + '" x2="' + pos(stats.median).toFixed(1) + '" y1="' + (axisY - 15) + '" y2="' + (axisY + 15) + '" stroke="#ede9fe" stroke-width="2"/>');
+
+    [
+      [stats.min, "start", 0],
+      [stats.max, "end", 0]
+    ].forEach(function (item) {
+      var x = pos(item[0]);
+      parts.push('<line x1="' + x.toFixed(1) + '" x2="' + x.toFixed(1) + '" y1="' + (axisY - 7) + '" y2="' + (axisY + 7) + '" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>');
+      parts.push('<text class="axis-text" x="' + x.toFixed(1) + '" y="' + (axisY + 26) + '" text-anchor="' + item[1] + '">' + esc(compact(item[0])) + "</text>");
+    });
+    parts.push('<text class="axis-text" x="' + pos(stats.median).toFixed(1) + '" y="' + (axisY - 22) + '" text-anchor="middle" fill="#ddd6fe">中位 ' + esc(decimal(stats.median)) + "</text>");
+    parts.push("</svg>");
+    return parts.join("");
+  }
+
+  /* 直方图按卡片剩余高度撑满。
+     卡片高度由 grid 行高决定，而行高要等三块面板都渲染完才定，
+     所以这里先按默认比例画，等 render() 收尾时再由 fitDetailChart() 量一次剩余高度重画。 */
+  var lastDetail = null;
+
+  function drawHistogram(hist, total, accent, unit, tailHtml, fit) {
+    var wrap = $("#detailChart");
+    var tail = tailHtml || "";
+    wrap.innerHTML = histogramSVG(hist, total, accent, unit, fit) + tail;
+    lastDetail = { hist: hist, total: total, accent: accent, unit: unit, tail: tail };
+  }
+
+  /* SVG 元素没有 offsetHeight（那是 HTMLElement 的属性），量尺寸只能走 getBoundingClientRect */
+  function boxHeight(el) {
+    if (!el || !el.getBoundingClientRect) return 0;
+    return el.getBoundingClientRect().height || 0;
+  }
+
+  function fitDetailChart() {
+    if (!lastDetail) return;
+    var wrap = $("#detailChart");
+    var room = wrap.clientHeight || 0, width = wrap.clientWidth || 0;
+    if (!room || !width) return;                       // 无布局信息（测试桩 / 隐藏状态）保持默认比例
+    var current = boxHeight(wrap.querySelector(".chart-svg"));
+    var tailEl = wrap.querySelector(".box-strip");
+    var tailH = tailEl ? boxHeight(tailEl) + 14 : 0;     // 14 是四分位条的 margin-top
+    // 单列/窄屏下卡片高度由内容决定，SVG 又是绝对定位不参与撑高，
+    // 不够时会把图表压到四分位条上，所以这里把图表区的最小高度抬到「默认比例」所需值
+    if (room < current + tailH) {
+      wrap.style.minHeight = Math.ceil(current + tailH) + "px";
+      room = current + tailH;
+    }
+    // 上下限夹一下：太矮会糊掉刻度，太高会失真
+    var target = Math.max(160, Math.min(room - tailH, width * 1.15));
+    if (!current || Math.abs(target - current) < 10) return;
+    drawHistogram(lastDetail.hist, lastDetail.total, lastDetail.accent, lastDetail.unit,
+      lastDetail.tail, { width: width, height: target });
+  }
+
+  function categoryList(top, total, unit) {
+    if (!top || !top.length) return '<p class="note">没有可统计的取值。</p>';
+    var max = top[0].count || 1;
+    return '<div class="cat-list">' + top.map(function (item, index) {
+      var width = Math.max(2, (item.count / max) * 100);
+      var hue = index % 4;
+      var tip = item.value + " · " + item.count + unit + "（" + ((item.count / total) * 100).toFixed(1) + "%）";
+      return '<div class="cat-row" data-tip="' + esc(tip) + '">' +
+        '<span class="cat-label" title="' + esc(item.value) + '">' + esc(clip(item.value, 14)) + "</span>" +
+        '<span class="cat-track"><i style="width:' + width.toFixed(1) + '%"></i></span>' +
+        '<span class="cat-val">' + item.count + " · " + ((item.count / total) * 100).toFixed(1) + "%</span></div>";
+    }).join("") + "</div>";
+  }
+
+  function renderDetail(col) {
+    lastDetail = null;                 // 非直方图类型不要在收尾时被重画
+    if (!col) {
+      $("#detailName").textContent = "字段分布";
+      $("#detailBadge").textContent = "—";
+      $("#detailBadge").className = "badge";
+      $("#detailMeta").innerHTML = "";
+      $("#detailPills").innerHTML = "";
+      $("#detailChart").innerHTML = '<p class="note">导入数据后，这里会显示选中字段的分布画像。</p>';
+      return;
+    }
+    var meta = TYPE_META[col.type] || TYPE_META.text;
+    var total = col.total - col.missing;
+    $("#detailName").textContent = col.name;
+    $("#detailBadge").textContent = meta.label;
+    $("#detailBadge").className = "badge " + meta.cls;
+    $("#detailHint").textContent = col.type === "number" ? "分箱直方图" : col.type === "datetime" ? "时间分箱" : "";
+    $("#detailMeta").innerHTML = "有效 <b>" + intText(total) + "</b> · 缺失 <b>" + intText(col.missing) +
+      "</b>（" + pct(col.total ? col.missing / col.total : 0) + "） · 唯一值 <b>" + intText(col.unique) + "</b>";
+
+    var stats = col.stats || {};
+    if (col.type === "number") {
+      $("#detailPills").innerHTML = pillList([
+        ["均值", decimal(stats.mean)],
+        ["中位数", decimal(stats.median)],
+        ["最小", compact(stats.min)],
+        ["最大", compact(stats.max)],
+        ["标准差", decimal(stats.std)],
+        ["合计", compact(stats.sum)]
+      ]);
+      drawHistogram(col.hist, total, "#8b5cf6", " 行", boxStrip(stats));
+      return;
+    }
+    if (col.type === "datetime") {
+      var span = stats.spanDays || 0;
+      $("#detailPills").innerHTML = pillList([
+        ["起点", stats.min || "—"],
+        ["终点", stats.max || "—"],
+        ["跨度", decimal(span, 1) + " 天"]
+      ]);
+      drawHistogram(col.hist, total, "#22d3ee", " 行", "");
+      return;
+    }
+    if (col.type === "categorical" || col.type === "boolean") {
+      $("#detailPills").innerHTML = pillList([
+        ["类别数", intText(col.unique)],
+        ["最大占比", pct(stats.topShare || (col.top[0] ? col.top[0].count / total : 0))]
+      ]);
+      $("#detailChart").innerHTML = categoryList(col.top, total, " 行");
+      return;
+    }
+    if (col.type === "id") {
+      $("#detailPills").innerHTML = pillList([["唯一值", intText(col.unique)], ["重复", "0"]]);
+      $("#detailChart").innerHTML = '<p class="note">该列每个取值互不相同，判定为<b>标识列</b>（主键或流水号），' +
+        "因此不生成分布图，以免产生无意义的形状。</p>" + sampleRow(col.samples);
+      return;
+    }
+    if (col.type === "text") {
+      $("#detailPills").innerHTML = pillList([
+        ["唯一值", intText(col.unique)],
+        ["平均长度", decimal(stats.avgLength, 1) + " 字符"],
+        ["最长", intText(stats.maxLength) + " 字符"]
+      ]);
+      $("#detailChart").innerHTML = '<p class="note">该列为高基数自由文本，已按<b>文本列</b>处理，' +
+        "不做频次统计。</p>" + sampleRow(col.samples);
+      return;
+    }
+    $("#detailPills").innerHTML = "";
+    $("#detailChart").innerHTML = '<p class="note">该列全部为空。</p>';
+  }
+
+  function sampleRow(samples) {
+    if (!samples || !samples.length) return "";
+    return '<div class="sample-row">' + samples.slice(0, 6).map(function (value) {
+      return '<span class="sample">' + esc(clip(value, 42)) + "</span>";
+    }).join("") + "</div>";
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 渲染：相关性矩阵与缺失分布                                            */
+  /* ------------------------------------------------------------------ */
+  function corrFill(value) {
+    if (value === null || value === undefined) return "rgba(255,255,255,.05)";
+    // |r| 小于半个显示单位时就是「无关」，不给色相：
+    // 否则 -0.0003 这种会画出带颜色的格子，还配上一个 -0.00 的负零标签
+    if (Math.abs(value) < 0.005) return "rgba(255,255,255,.06)";
+    var alpha = 0.10 + 0.74 * Math.min(1, Math.abs(value));
+    return (value > 0 ? "rgba(34,211,238," : "rgba(251,113,133,") + alpha.toFixed(3) + ")";
+  }
+
+  /* 粗略估算文本宽度（单位 px）：全角按 1em、半角按 0.56em，
+     用来把标签按实际占位截断，而不是一律砍到固定字数 */
+  function textWidth(str, size) {
+    var w = 0;
+    for (var i = 0; i < str.length; i++) w += str.charCodeAt(i) > 255 ? 1 : 0.56;
+    return w * size;
+  }
+
+  /* 把文本截到指定像素宽，超出补省略号 */
+  function clipToWidth(str, size, maxWidth) {
+    if (textWidth(str, size) <= maxWidth) return str;
+    var out = "";
+    for (var i = 0; i < str.length; i++) {
+      if (textWidth(out + str.charAt(i) + "…", size) > maxWidth) break;
+      out += str.charAt(i);
+    }
+    return out + "…";
+  }
+
+  function renderCorr(data) {
+    var labels = data.correlation.labels || [], matrix = data.correlation.matrix || [];
+    if (labels.length < 2) {
+      $("#corrChart").innerHTML = '<p class="note">可参与相关性计算的数值列少于 2 个。</p>';
+      return;
+    }
+
+    /* 布局全部按容器实测宽度算，不再使用写死的宽松内边距。
+       之前 padLeft=122 / padTop=100 是为竖排长列名留的，
+       换成中文短列名后左侧白留出三分之一面板宽——这就是「侧面空一大片」的来源。 */
+    var host = $("#corrChart");
+    var hostW = (host && host.clientWidth) || 0;
+    if (!(hostW > 120)) hostW = 520;            // 单文件报告首屏 / 测试桩下取默认值
+    var n = labels.length;
+    var FS = 10.5;                               // 与 .axis-text 一致
+    var labelW = 0;
+    labels.forEach(function (label) {
+      labelW = Math.max(labelW, textWidth(clip(label, 8), FS));
+    });
+    labelW = Math.max(26, Math.min(labelW, 96));
+
+    var padLeft = labelW + 12;
+    var avail = Math.max(80, hostW - padLeft - 2);
+    var cell = Math.floor(avail / n);
+    var minCell = 38, maxCell = 84;              // 下限保证「-0.07」这种五位数还看得清
+    var scroll = cell < minCell;                 // 列太多时允许横向滚动，不再压缩到不可读
+    if (scroll) cell = minCell;
+    else if (cell > maxCell) cell = maxCell;
+
+    var gridW = cell * n;
+    // 单元格封顶后剩余空间居中分配，左右留白对称，矩阵不再贴左
+    var offset = scroll ? 0 : Math.max(0, (avail - gridW) / 2);
+    var x0 = padLeft + offset;
+    var padTop = 24;                             // 列名改为横排，不再需要 100px 斜排headroom
+    var W = scroll ? x0 + gridW + 2 : hostW;
+    var H = padTop + gridW + 6;
+    var radius = Math.min(9, Math.round(cell * 0.2));
+    var valFs = Math.max(10, Math.min(17, Math.round(cell * 0.22)));   // 格子变大时数字跟着放大，别留一个空旷的大格
+    var labelFs = cell >= 34 ? FS : 9.5;
+
+    var parts = ['<svg class="chart-svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="相关性矩阵"' +
+      (scroll ? ' style="min-width:' + W + 'px"' : "") + ">"];
+
+    labels.forEach(function (label, j) {
+      var cx = x0 + j * cell + cell / 2;
+      // 窄格里列名只能截断，补 title 让悬停能看到全名
+      parts.push('<text class="axis-text" x="' + cx.toFixed(1) + '" y="' + (padTop - 9) + '" text-anchor="middle" font-size="' +
+        labelFs + '"><title>' + esc(label) + "</title>" + esc(clipToWidth(label, labelFs, cell - 6)) + "</text>");
+    });
+    labels.forEach(function (label, i) {
+      var y = padTop + i * cell + cell / 2 + 4;
+      parts.push('<text class="axis-text" x="' + (x0 - 10).toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="end"><title>' +
+        esc(label) + "</title>" + esc(clipToWidth(label, FS, labelW)) + "</text>");
+    });
+    matrix.forEach(function (row, i) {
+      row.forEach(function (value, j) {
+        var x = x0 + j * cell, y = padTop + i * cell;
+        var near = value !== null && value !== undefined && Math.abs(value) < 0.005;
+        var shown = value === null || value === undefined ? "—" : (near ? "0.00" : value.toFixed(2));
+        var tip = labels[i] + " 与 " + labels[j] + " · 相关系数 " + shown;
+        parts.push('<rect x="' + (x + 2) + '" y="' + (y + 2) + '" width="' + (cell - 4) + '" height="' + (cell - 4) +
+          '" rx="' + radius + '" fill="' + corrFill(value) + '" stroke="rgba(255,255,255,.10)" data-tip="' + esc(tip) + '"/>');
+        var ink = value === null ? "rgba(255,255,255,.35)" : "rgba(255,255,255," + (0.55 + 0.45 * Math.min(1, Math.abs(value))).toFixed(2) + ")";
+        parts.push('<text x="' + (x + cell / 2) + '" y="' + (y + cell / 2 + 4) + '" text-anchor="middle" font-size="' + valFs +
+          '" font-family="var(--mono)" fill="' + ink + '">' + shown + "</text>");
+      });
+    });
+    parts.push("</svg>");
+
+    /* 图例 + 未计入列：矩阵只含数值列，不说明的话「为什么只有这几列」只能靠猜 */
+    var excluded = (data.columns || []).filter(function (col) { return labels.indexOf(col.name) < 0; });
+    var outText = excluded.length
+      ? "仅数值列参与计算，未计入 " + excluded.length + " 列：" + excluded.slice(0, 3).map(function (col) {
+        var meta = TYPE_META[col.type] || { label: col.type };
+        return esc(clip(col.name, 8)) + "（" + meta.label + "）";
+      }).join("、") + (excluded.length > 3 ? " 等" : "")
+      : "";
+    parts.push('<div class="corr-foot"><span class="corr-bar"></span>' +
+      '<span class="corr-scale"><i>−1 完全负相关</i><i>0 无关</i><i>+1 完全正相关</i></span>' +
+      (outText ? '<span class="corr-out">' + outText + "</span>" : "") + "</div>");
+
+    $("#corrChart").innerHTML = parts.join("");
+  }
+
+  function renderMissing(data) {
+    var rows = data.columns.filter(function (col) { return col.missing > 0; }).map(function (col) {
+      return { name: col.name, rate: col.missing / Math.max(col.total, 1), missing: col.missing };
+    }).sort(function (a, b) { return b.rate - a.rate; }).slice(0, 7);
+
+    if (!rows.length) {
+      $("#missChart").innerHTML = '<p class="note">没有缺失值：' + intText(data.quality.cells) + " 个单元格全部有值。</p>";
+      return;
+    }
+    $("#missChart").innerHTML = rows.map(function (row) {
+      var width = Math.max(2, row.rate * 100);
+      return '<div class="miss-row" data-tip="' + esc(row.name + " · " + row.missing + " 格缺失") + '">' +
+        '<span class="miss-name" title="' + esc(row.name) + '">' + esc(clip(row.name, 12)) + "</span>" +
+        '<span class="miss-track"><i style="width:' + width.toFixed(1) + '%"></i></span>' +
+        '<span class="miss-val">' + (row.rate * 100).toFixed(1) + "%</span></div>";
+    }).join("");
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 渲染：数据表                                                         */
+  /* ------------------------------------------------------------------ */
+  function typeOf(name) {
+    var found = (state.data.columns || []).filter(function (col) { return col.name === name; })[0];
+    return found ? found.type : "text";
+  }
+
+  function compareValues(a, b, type) {
+    if (type === "number") {
+      var na = parseNum(a), nb = parseNum(b);
+      if (na === null && nb === null) return 0;
+      if (na === null) return 1;
+      if (nb === null) return -1;
+      return na - nb;
+    }
+    if (type === "datetime") {
+      var da = parseDate(a), db = parseDate(b);
+      if (da === null && db === null) return 0;
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return da - db;
+    }
+    return String(a).localeCompare(String(b), "zh-Hans-CN");
+  }
+
+  function renderTable(data) {
+    var columns = data.preview.columns || [];
+    var rows = (data.preview.rows || []).slice();
+    var types = columns.map(typeOf);
+
+    if (state.query) {
+      var needle = state.query.toLowerCase();
+      rows = rows.filter(function (row) {
+        return row.some(function (cell) { return String(cell).toLowerCase().indexOf(needle) >= 0; });
+      });
+    }
+    if (state.sort) {
+      var index = state.sort.index, dir = state.sort.dir === "asc" ? 1 : -1;
+      rows.sort(function (a, b) {
+        var left = a[index], right = b[index];
+        var leftEmpty = isMissing(left), rightEmpty = isMissing(right);
+        // 缺失值不参与方向，始终排在末尾
+        if (leftEmpty || rightEmpty) return leftEmpty && rightEmpty ? 0 : leftEmpty ? 1 : -1;
+        return compareValues(left, right, types[index]) * dir;
+      });
+    }
+
+    var head = "<tr>" + columns.map(function (name, i) {
+      var dir = state.sort && state.sort.index === i ? state.sort.dir : "";
+      var arrow = dir === "asc" ? "▲" : dir === "desc" ? "▼" : "↕";
+      var mark = '<span class="sort">' + arrow + "</span>";
+      // 数值列表头右对齐，箭头放文字左侧，让文字右边缘贴住数值右边缘
+      var numeric = types[i] === "number";
+      return '<th data-index="' + i + '" data-dir="' + dir + '"' + (numeric ? ' class="num"' : "") + ">" +
+        (numeric ? mark + esc(name) : esc(name) + mark) + "</th>";
+    }).join("") + "</tr>";
+
+    var body = rows.slice(0, 300).map(function (row) {
+      return "<tr>" + columns.map(function (_, i) {
+        var raw = row[i] === undefined ? "" : row[i];
+        var cls = types[i] === "number" ? ' class="num"' : "";
+        var content = raw === "" ? '<span class="na">—</span>' : esc(clip(raw, 60));
+        return "<td" + cls + ' title="' + esc(raw) + '">' + content + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+
+    $("#dataTable").querySelector("thead").innerHTML = head;
+    $("#dataTable").querySelector("tbody").innerHTML = body || '<tr><td colspan="' + Math.max(columns.length, 1) + '" class="note">没有符合条件的行。</td></tr>';
+    $("#tableHint").textContent = "预览 " + rows.length + " / " + intText(data.preview.total) + " 行";
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 主渲染                                                              */
+  /* ------------------------------------------------------------------ */
+  function render() {
+    var data = state.data;
+    if (!data) { renderEmpty(); return; }
+    document.body.classList.remove("is-empty");
+    renderMeta(data);
+    renderKPIs(data);
+    renderWarnings(data);
+    renderCleaning(data.cleaning);
+    refreshCleanControls();
+    renderCleanNote(state.cleaned ? state.cleaned.report : null);
+    renderExplorer(data);
+    var selected = data.columns.filter(function (col) { return col.name === state.selected; })[0];
+    if (!selected) {
+      selected = data.columns.filter(function (col) { return col.type === "number"; })[0] || data.columns[0];
+      state.selected = selected ? selected.name : null;
+    }
+    renderDetail(selected);
+    renderCorr(data);
+    renderMissing(data);
+    renderTable(data);
+    fitDetailChart();   // 三块面板都画完，行高才定，这时才能把直方图撑到剩余高度
+  }
+
+  /* 清洗摘要：把「改了什么」摊开，避免用户以为数据被偷偷动过。
+     没有 cleaning 字段（没做清洗）时整块隐藏，不留空行。 */
+  function renderCleaning(cleaning) {
+    var node = $("#cleanStrip");
+    if (!node) return;
+    if (!cleaning) {
+      node.hidden = true;
+      node.innerHTML = "";
+      return;
+    }
+    var before = cleaning.before || {}, after = cleaning.after || {};
+    var steps = cleaning.steps || [];
+    var html = "";
+    html += '<div class="clean-head"><b>已清洗</b><span>' +
+      esc((cleaning.options || []).join(" · ") || "无动作") + "</span></div>";
+    html += '<div class="clean-flow">' +
+      "<span>行 <i>" + intText(before.rows) + "</i> → <i>" + intText(after.rows) + "</i></span>" +
+      "<span>缺失 <i>" + intText(before.missing) + "</i> → <i>" + intText(after.missing) + "</i></span>" +
+      "<span>重复行 <i>" + intText(before.duplicates) + "</i> → <i>" + intText(after.duplicates) + "</i></span>" +
+      "<span>列 <i>" + intText(before.columns) + "</i> → <i>" + intText(after.columns) + "</i></span>" +
+      "</div>";
+    if (steps.length) {
+      html += '<div class="clean-steps">' + steps.map(function (step) {
+        return '<span class="clean-step">' + esc(step.name + "：" + step.detail) + "</span>";
+      }).join("") + "</div>";
+    }
+    node.innerHTML = html;
+    node.hidden = false;
+  }
+
+  /* 告警条：把「不会报错但会让结论偏掉」的问题摆到最显眼的位置。
+     日期歧义额外给一个可点击的切换，避免用户只能重做一遍。 */
+  function renderWarnings(data) {
+    var row = $("#warnRow");
+    if (!row) return;
+    var list = (data && data.warnings) || [];
+    /* 读取层的提示（跳过标题行、自动换表）排在分析提示前面：
+       它解释的是「这份表是怎么被理解的」，比统计口径更靠前。 */
+    if (state.readNotes && state.readNotes.length) {
+      list = state.readNotes.map(function (text) {
+        return { level: "info", message: text };
+      }).concat(list);
+    }
+    if (!list.length) { row.innerHTML = ""; return; }
+    var shown = list.slice(0, 4);
+    /* 单文件报告内嵌的只是前 40 行预览，没有完整原始行可重算，
+       这时不摆一个点了没反应的按钮——只在导入过数据后才提供切换。 */
+    var canFlip = !!state.parsed;
+    row.innerHTML = shown.map(function (item, index) {
+      var cls = item.level === "warn" ? "warn-chip" : "warn-chip info";
+      var action = (item.kind === "date-order" && canFlip)
+        ? '<button class="act" type="button" data-flip-order="1">按' +
+          (state.dateOrder === "mdy" ? "日/月" : "月/日") + '重算</button>'
+        : "";
+      return '<span class="' + cls + '" data-warn-index="' + index + '">' + esc(item.message) + action + "</span>";
+    }).join("") + (list.length > shown.length
+      ? '<span class="warn-chip info">另有 ' + (list.length - shown.length) + " 条提示</span>"
+      : "");
+  }
+
+  function renderEmpty() {
+    /* 空状态即落地页：先讲清「这是什么、给谁用、数据去哪了」，
+       面板本身隐藏，不让占位骨架稀释第一印象。 */
+    document.body.classList.add("is-empty");
+    $("#docTitle").textContent = "数据分析工具";
+    $("#metaChips").innerHTML = "";
+    $("#warnRow").innerHTML = "";
+    $("#cleanStrip").hidden = true;
+    fillSheetSelect({ sheets: [] });
+    refreshCleanControls();
+    $("#kpiGrid").innerHTML = ["数据行", "字段数", "单元格", "完整度", "重复行"].map(function (label) {
+      return '<div class="kpi"><span class="kpi-label">' + label + '</span><strong class="kpi-value">—</strong>' +
+        '<span class="kpi-hint">等待数据</span></div>';
+    }).join("");
+    $("#insightRow").innerHTML = '<span class="insight">拖入 CSV / TSV / JSON 文件，或点右上角「示例数据」先看一眼</span>';
+    $("#colCount").textContent = "0 个字段";
+    $("#colList").innerHTML = '<p class="note">尚未载入数据。</p>';
+    $("#typeLegend").textContent = "点击字段查看其分布画像";
+    $("#detailName").textContent = "字段分布";
+    $("#detailBadge").textContent = "—";
+    $("#detailBadge").className = "badge";
+    $("#detailHint").textContent = "";
+    $("#detailMeta").innerHTML = "";
+    $("#detailPills").innerHTML = "";
+    $("#detailChart").innerHTML = '<p class="note">导入数据后，这里会显示选中字段的分布画像。</p>';
+    $("#corrChart").innerHTML = '<p class="note">等待数据。</p>';
+    $("#missChart").innerHTML = '<p class="note">等待数据。</p>';
+    $("#dataTable").querySelector("thead").innerHTML = "";
+    $("#dataTable").querySelector("tbody").innerHTML = "";
+    $("#tableHint").textContent = "";
+    $("#buildStamp").textContent = buildLabel();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 交互                                                                */
+  /* ------------------------------------------------------------------ */
+  var toastTimer = null;
+  function toast(message) {
+    var node = $("#toast");
+    node.textContent = message;
+    node.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { node.classList.remove("show"); }, 2400);
+  }
+
+  var tipNode = $("#tip");
+  document.addEventListener("mousemove", function (event) {
+    var target = event.target.closest ? event.target.closest("[data-tip]") : null;
+    if (!target) { tipNode.classList.remove("show"); return; }
+    tipNode.textContent = target.getAttribute("data-tip");
+    tipNode.classList.add("show");
+    var left = Math.min(event.clientX + 14, window.innerWidth - tipNode.offsetWidth - 12);
+    var top = event.clientY - tipNode.offsetHeight - 12;
+    if (top < 8) top = event.clientY + 18;
+    tipNode.style.left = Math.max(8, left) + "px";
+    tipNode.style.top = top + "px";
+  });
+
+  document.addEventListener("click", function (event) {
+    var item = event.target.closest ? event.target.closest(".col-item") : null;
+    if (item) {
+      state.selected = item.getAttribute("data-col");
+      renderExplorer(state.data);
+      renderDetail(state.data.columns.filter(function (col) { return col.name === state.selected; })[0]);
+      return;
+    }
+    var th = event.target.closest ? event.target.closest("#dataTable th") : null;
+    if (th) {
+      var index = Number(th.getAttribute("data-index"));
+      if (state.sort && state.sort.index === index) {
+        state.sort.dir = state.sort.dir === "asc" ? "desc" : "asc";
+      } else {
+        state.sort = { index: index, dir: "asc" };
+      }
+      renderTable(state.data);
+    }
+  });
+
+  $("#colSearch").addEventListener("input", function (event) {
+    state.colQuery = event.target.value;
+    if (state.data) renderExplorer(state.data);
+  });
+
+  $("#tableFilter").addEventListener("input", function (event) {
+    state.query = event.target.value;
+    if (state.data) renderTable(state.data);
+  });
+
+  $("#btnExport").addEventListener("click", function () {
+    if (!state.data) { toast("还没有可导出的数据"); return; }
+    var blob = new Blob([JSON.stringify(state.data, null, 2)], { type: "application/json" });
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "glassdata-profile.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(function () { URL.revokeObjectURL(link.href); }, 1200);
+    toast("画像 JSON 已导出");
+  });
+
+  /* 把文件当二进制读，再判定编码。
+     中文办公场景导出的 CSV 常是 GBK，按 UTF-8 硬读会整篇乱码；
+     而乱码不会让程序报错，只会得到一份「全是文本列」的怪报告。
+
+     判定顺序很关键：GB18030 几乎能"成功"解出任意字节序列，
+     放在前面会把 UTF-16（Excel 的「Unicode 文本」）与 Big5 都错解成乱码。
+     所以先看 BOM，再看 UTF-16 的 NUL 特征，再试 UTF-8，最后在
+     GB18030 / Big5 之间按"像不像中文"打分取高分者。 */
+  var BOM_TABLE = [
+    { bytes: [0xef, 0xbb, 0xbf], enc: "utf-8", label: "UTF-8" },
+    { bytes: [0xff, 0xfe, 0x00, 0x00], enc: "utf-32le", label: "UTF-32 LE" },
+    { bytes: [0x00, 0x00, 0xfe, 0xff], enc: "utf-32be", label: "UTF-32 BE" },
+    { bytes: [0xff, 0xfe], enc: "utf-16le", label: "UTF-16 LE" },
+    { bytes: [0xfe, 0xff], enc: "utf-16be", label: "UTF-16 BE" }
+  ];
+
+  function startsWithBytes(bytes, pattern) {
+    if (bytes.length < pattern.length) return false;
+    for (var i = 0; i < pattern.length; i++) {
+      if (bytes[i] !== pattern[i]) return false;
+    }
+    return true;
+  }
+
+  /* 二进制格式靠文件头识别，不靠扩展名——用户常把 parquet 改名成 .csv，只认扩展名拦不住。
+     命中后必须给出「下一步怎么办」：只说"不支持"等于把问题丢回给用户。 */
+  var BINARY_SIGNATURES = [
+    { bytes: [0x50, 0x4b, 0x03, 0x04], name: "Excel / ODS 等压缩容器格式", advice: "请用 Excel / WPS 打开后「另存为 CSV」" },
+    { bytes: [0xd0, 0xcf, 0x11, 0xe0], name: "旧版 Excel（.xls）或 Access 数据库", advice: "请另存为 CSV 后再导入" },
+    { bytes: [0x50, 0x41, 0x52, 0x31], name: "Parquet 列式文件", advice: "请用 pandas 读取后导出 CSV" },
+    { bytes: [0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00],
+      name: "SQLite 数据库", advice: "请用 sqlite3 导出 CSV" },
+    { bytes: [0x3c, 0x73, 0x74, 0x61, 0x74, 0x61, 0x5f, 0x64, 0x74, 0x61, 0x3e], name: "Stata 数据文件（.dta）",
+      advice: "请用 pandas.read_stata 后导出 CSV" },
+    { bytes: [0x24, 0x46, 0x4c, 0x32], name: "SPSS 数据文件（.sav）", advice: "请用 pandas.read_spss 后导出 CSV" },
+    { bytes: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc2, 0xea, 0x81, 0x60],
+      name: "SAS 数据文件（.sas7bdat）", advice: "请用 pandas.read_sas 后导出 CSV" },
+    { bytes: [0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a], name: "HDF5 文件", advice: "请用 h5py / pandas 读取后导出 CSV" },
+    { bytes: [0x1f, 0x8b], name: "gzip 压缩文件", advice: "请先解压（gunzip）再导入" },
+    { bytes: [0x25, 0x50, 0x44, 0x46], name: "PDF 文件", advice: "不支持直接读取，请把表格另存为 CSV" },
+    { bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], name: "PNG 图片", advice: "不支持图片，请先导出为 CSV" },
+    { bytes: [0xff, 0xd8, 0xff], name: "JPEG 图片", advice: "不支持图片，请先导出为 CSV" }
+  ];
+
+  function detectBinary(bytes) {
+    if (!bytes || !bytes.length) return "";
+    for (var i = 0; i < BINARY_SIGNATURES.length; i++) {
+      var entry = BINARY_SIGNATURES[i];
+      if (startsWithBytes(bytes, entry.bytes)) {
+        return "这看起来是" + entry.name + "，不是文本表格：" + entry.advice;
+      }
+    }
+    return "";
+  }
+
+  /* 未知格式的兜底：正常表格不会有大量不可打印字符。
+     没有这层判断，任何二进制文件都会被 latin-1「成功」解码，
+     最后以「只有表头，没有数据行」告终，用户只会以为自己文件坏了。 */
+  function looksBinary(text) {
+    var sample = (text || "").slice(0, 4096);
+    if (!sample) return false;
+    var control = 0;
+    for (var i = 0; i < sample.length; i++) {
+      var code = sample.charCodeAt(i);
+      if ((code < 32 && code !== 9 && code !== 10 && code !== 13 && code !== 12 && code !== 11) || code === 127) {
+        control += 1;
+      }
+    }
+    return control >= 5 && control / sample.length > 0.02;
+  }
+
+  /* 浏览器没有内置 UTF-32 解码器，按码位拼一下 */
+  function decodeUtf32(bytes, littleEndian) {
+    var out = "";
+    for (var i = 0; i + 3 < bytes.length; i += 4) {
+      var cp = littleEndian
+        ? (bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24)) >>> 0
+        : ((bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3]) >>> 0;
+      out += String.fromCodePoint(cp > 0x10ffff ? 0xfffd : cp);
+    }
+    return out;
+  }
+
+  /* 无 BOM 的 UTF-16 靠 NUL 字节分布识别：ASCII 文本每隔一字节就是 0x00 */
+  function sniffUtf16(bytes) {
+    var head = bytes.subarray(0, 4096);
+    var hasNul = false;
+    for (var i = 0; i < head.length; i++) {
+      if (head[i] === 0) { hasNul = true; break; }
+    }
+    if (!hasNul) return null;
+    var evenZeros = 0, oddZeros = 0;
+    for (var k = 0; k < head.length; k += 2) {
+      if (head[k] === 0) evenZeros++;
+      if (head[k + 1] === 0) oddZeros++;
+    }
+    var half = Math.max(1, Math.floor(head.length / 2));
+    if (oddZeros > half * 0.4 && evenZeros < half * 0.05) return { enc: "utf-16le", label: "UTF-16 LE" };
+    if (evenZeros > half * 0.4 && oddZeros < half * 0.05) return { enc: "utf-16be", label: "UTF-16 BE" };
+    return null;
+  }
+
+  /* 错解码的典型产物是私用区 / 罕用扩展区字符，用它们给文本打分 */
+  function scoreText(text) {
+    var score = 0;
+    var chars = Array.from(text.slice(0, 4000));
+    for (var i = 0; i < chars.length; i++) {
+      var cp = chars[i].codePointAt(0);
+      if (cp < 0x80) score += 1;                                  // ASCII
+      else if (cp >= 0x4e00 && cp <= 0x9fff) score += 2;           // 常用汉字
+      else if (cp >= 0x3000 && cp <= 0x303f) score += 2;           // 中文标点
+      else if (cp >= 0xff00 && cp <= 0xffef) score += 2;           // 全角
+      else if (cp >= 0xe000 && cp <= 0xf8ff) score -= 6;           // 私用区
+      else if (cp >= 0x20000) score -= 4;                          // 罕用扩展区
+      else score -= 1;
+    }
+    return score;
+  }
+
+  function decodeBuffer(buffer) {
+    var bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+
+    // 1. BOM：编码已经写死在文件里，不用猜
+    for (var b = 0; b < BOM_TABLE.length; b++) {
+      var entry = BOM_TABLE[b];
+      if (!startsWithBytes(bytes, entry.bytes)) continue;
+      var body = bytes.subarray(entry.bytes.length);
+      try {
+        if (entry.enc === "utf-32le") return { text: decodeUtf32(body, true), label: entry.label };
+        if (entry.enc === "utf-32be") return { text: decodeUtf32(body, false), label: entry.label };
+        return { text: new TextDecoder(entry.enc, { fatal: true }).decode(body), label: entry.label };
+      } catch (error) {
+        break;   // BOM 写了但内容对不上，退回下面的通用判定
+      }
+    }
+
+    // 2. 无 BOM 的 UTF-16
+    var sniffed = sniffUtf16(bytes);
+    if (sniffed) {
+      try {
+        return { text: new TextDecoder(sniffed.enc, { fatal: true }).decode(bytes), label: sniffed.label };
+      } catch (error) {
+        /* 落到下面继续 */
+      }
+    }
+
+    // 3. UTF-8 能解开就用它，误判概率极低
+    try {
+      return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), label: "UTF-8" };
+    } catch (error) {
+      /* 继续比较东亚编码 */
+    }
+
+    // 4. GB18030 与 Big5 字节区间重叠，用打分决定
+    var candidates = [];
+    var asian = [["gb18030", "GBK / GB18030"], ["big5", "Big5"]];
+    for (var i = 0; i < asian.length; i++) {
+      try {
+        var text = new TextDecoder(asian[i][0], { fatal: true }).decode(bytes);
+        candidates.push({ score: scoreText(text), text: text, label: asian[i][1] });
+      } catch (error) {
+        continue;
+      }
+    }
+    if (candidates.length) {
+      candidates.sort(function (a, b) { return b.score - a.score; });
+      return { text: candidates[0].text, label: candidates[0].label };
+    }
+
+    return { text: new TextDecoder("utf-8").decode(bytes), label: "UTF-8（含无法还原的字节）" };
+  }
+
+  /* 把底层异常翻成用户能照着做的下一步，而不是甩一句 SyntaxError */
+  function friendlyError(error, name) {
+    var raw = String((error && error.message) || error || "");
+    if (/JSON/i.test(raw)) {
+      return "「" + name + "」不是合法 JSON：请确认文件是对象数组，或包含 rows/data/records 字段";
+    }
+    if (/只有表头/.test(raw)) return "「" + name + "」只有表头，没有数据行";
+    if (/Unexpected|not valid|非法/.test(raw)) return "「" + name + "」解析失败：" + raw;
+    return "「" + name + "」解析失败：" + raw;
+  }
+
+  function setProgress(ratio, text) {
+    var bar = $("#progress");
+    if (!bar) return;
+    if (ratio === null) {
+      bar.classList.remove("on");
+      bar.querySelector("span").style.width = "0%";
+      return;
+    }
+    bar.classList.add("on");
+    bar.querySelector("span").style.width = Math.max(2, Math.min(100, ratio * 100)).toFixed(1) + "%";
+    if (text) toast(text);
+  }
+
+  async function runAnalysis(columns, rows, name, extra) {
+    setProgress(0.02, "正在分析 " + name + "…");
+    state.data = await analyze(columns, rows, {
+      source: name,
+      engine: "browser",
+      cleaning: extra && extra.cleaning
+    }, function (done, total) {
+      setProgress(done / Math.max(total, 1), null);
+    });
+    state.selected = null;
+    state.sort = null;
+    state.query = "";
+    $("#tableFilter").value = "";
+    render();
+    setProgress(null);
+  }
+
+  async function ingestText(text, name) {
+    try {
+      var parsed = parseText(text, name);
+      var originalRows = parsed.rows.length;
+      if (originalRows > MAX_ANALYZE_ROWS) {
+        parsed.rows = parsed.rows.slice(0, MAX_ANALYZE_ROWS);
+      }
+      state.parsed = { columns: parsed.columns, rows: parsed.rows, name: name };
+      state.cleaned = null;   // 换了文件，上一份清洗结果就作废，别让「下载」按到旧数据上
+      state.readNotes = [];   // 文本文件没有工作表、也没有合并单元格，提示要清掉
+      state.excelBuffer = null;
+      state.currentSheet = "";
+      fillSheetSelect({ sheets: [] });
+      await runAnalysis(parsed.columns, parsed.rows, name);
+      // 截断提示不能先在前面 toast 一次——分析结束时这条会把上一条顶掉，
+      // 用户就永远看不到"只分析了前 50 万行"，所以合并成一句说清楚
+      toast("已载入 " + name + "（" + intText(parsed.rows.length) + " 行" +
+        (originalRows > parsed.rows.length
+          ? "，原文 " + intText(originalRows) + " 行，仅分析前 " + intText(parsed.rows.length) + " 行"
+          : "") + "）");
+      return true;
+    } catch (error) {
+      setProgress(null);
+      toast(friendlyError(error, name));
+      return false;
+    }
+  }
+
+  /* Excel：用站点自带的 xlsx.js 解压 + 解析（纯前端，数据不出本机）。
+     浏览器没有 DecompressionStream 时明确说清版本要求，而不是让人以为文件坏了。 */
+  /* 多工作表时才出现的下拉：切换后直接用缓存字节重解析，不必让用户再选一次文件 */
+  function fillSheetSelect(table) {
+    var select = $("#sheetSelect");
+    if (!select) return;
+    if (!table.sheets || table.sheets.length < 2) {
+      select.hidden = true;
+      select.innerHTML = "";
+      return;
+    }
+    select.innerHTML = table.sheets.map(function (name) {
+      return '<option value="' + esc(name) + '"' + (name === table.sheet ? " selected" : "") +
+        ">" + esc(name) + "</option>";
+    }).join("");
+    select.hidden = false;
+  }
+
+  function applyExcelTable(table, fileName) {
+    var name = table.sheets.length > 1 ? fileName + " · " + table.sheet : fileName;
+    var rows = table.rows;
+    var original = rows.length;
+    if (original > MAX_ANALYZE_ROWS) rows = rows.slice(0, MAX_ANALYZE_ROWS);
+    state.parsed = { columns: table.columns, rows: rows, name: name };
+    state.cleaned = null;
+    state.readNotes = (table.notes || []).slice();
+    state.currentSheet = table.sheet;
+    fillSheetSelect(table);
+    return runAnalysis(table.columns, rows, name).then(function () {
+      setProgress(null);
+      toast("已载入 " + name + "（" + intText(rows.length) + " 行" +
+        (original > rows.length ? "，仅分析前 " + intText(rows.length) + " 行" : "") + "）" +
+        (table.sheets.length > 1 ? "，工作簿共 " + table.sheets.length + " 个工作表" : ""));
+    });
+  }
+
+  function ingestExcel(file) {
+    if (!window.GlassXlsx || !GlassXlsx.supported()) {
+      toast("这个浏览器不支持在本地解压 Excel：请用较新的 Chrome / Edge / Safari，" +
+        "或用桌面版（双击 main.py）读取");
+      return;
+    }
+    setProgress(0.01, "正在解析 " + file.name + "…");
+    file.arrayBuffer()
+      .then(function (buffer) {
+        state.excelBuffer = buffer;
+        state.excelName = file.name;
+        return window.GlassXlsx.read(buffer);
+      })
+      .then(function (table) { return applyExcelTable(table, file.name); })
+      .catch(function (error) {
+        setProgress(null);
+        toast("读取 Excel 失败：" + (error && error.message ? error.message : "未知错误"));
+      });
+  }
+
+  /* 换工作表：只换这一张，其它状态清空（排序、筛选、清洗结果都属于上一张表） */
+  function switchSheet(name) {
+    if (!state.excelBuffer || !name) return;
+    setProgress(0.01, "正在读取「" + name + "」…");
+    window.GlassXlsx.read(state.excelBuffer, { sheet: name })
+      .then(function (table) { return applyExcelTable(table, state.excelName); })
+      .catch(function (error) {
+        setProgress(null);
+        /* 切换失败时页面上的数据还是上一张表，下拉必须跟着退回去，
+           否则「下拉写着说明、内容却是数据」会让人以为读错了。 */
+        var select = $("#sheetSelect");
+        if (select && state.currentSheet) select.value = state.currentSheet;
+        toast("切换工作表失败：" + (error && error.message ? error.message : "未知错误"));
+      });
+  }
+
+  function ingestFile(file) {
+    if (!file) return;
+    // Excel 新格式（xlsx/xlsm）走前端工作簿解析；旧格式与 ODS 仍请走桌面版
+    if (/\.(xlsx|xlsm)$/i.test(file.name)) { ingestExcel(file); return; }
+    // 其它二进制表格按文本读出来只会得到一句"文件只有表头"，用户会以为自己文件坏了
+    if (/\.(xls|ods|numbers)$/i.test(file.name)) {
+      toast("网页版读不了「" + file.name + "」：桌面版（双击 main.py）支持 .xls/.ods，" +
+        "或在此文件里「另存为 .xlsx / CSV」后再拖进来");
+      return;
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      toast("文件超过 200 MB，浏览器内处理会耗尽内存，建议先用命令行版拆表");
+      return;
+    }
+    var reader = new FileReader();
+    reader.onerror = function () { toast("无法读取「" + file.name + "」，可能被占用或没有权限"); };
+    reader.onload = function () {
+      var bytes = new Uint8Array(reader.result);
+      var hint = detectBinary(bytes);
+      if (hint) { toast(hint); return; }
+      var decoded = decodeBuffer(reader.result);
+      if (looksBinary(decoded.text)) {
+        toast("「" + file.name + "」不是文本表格：内容含大量不可打印字符，请另存为 CSV 后再导入");
+        return;
+      }
+      if (!/^UTF-8$/.test(decoded.label)) {
+        toast("按 " + decoded.label + " 解码（非 UTF-8 文件已自动回退）");
+      }
+      ingestText(decoded.text, file.name);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 清洗工作台                                                          */
+  /* ------------------------------------------------------------------ */
+  /* 面板上的选择与 state.clean 是同一份东西：state 是底稿，DOM 是它的影子。
+     读的时候以「DOM 上真有这个控件」为准（readCheckbox / readChoice），
+     这样在没有真实 DOM 的测试环境里会自然退回底稿，而不是读出一串 undefined。 */
+  function readCheckbox(id, fallback) {
+    var node = $("#" + id);
+    return node && typeof node.checked === "boolean" ? node.checked : fallback;
+  }
+
+  function readChoice(id, fallback) {
+    var node = $("#" + id);
+    return node && typeof node.value === "string" && node.value ? node.value : fallback;
+  }
+
+  function collectCleanOptions() {
+    var prev = state.clean;
+    return {
+      trim: readCheckbox("optTrim", prev.trim),
+      drop_blank: readCheckbox("optDropBlank", prev.drop_blank),
+      dedupe: readCheckbox("optDedupe", prev.dedupe),
+      coerce: readCheckbox("optCoerce", prev.coerce),
+      fill: readChoice("cleanFill", prev.fill),
+      fill_value: readChoice("cleanValue", prev.fill_value),
+      outliers: readChoice("cleanOutliers", prev.outliers)
+    };
+  }
+
+  /* 勾选态用类名标出来：老浏览器不认 :has()，勾上了却不变色比不加样式更让人困惑 */
+  function syncCleanChecks() {
+    var ids = ["optTrim", "optDropBlank", "optDedupe", "optCoerce"];
+    for (var i = 0; i < ids.length; i++) {
+      var box = $("#" + ids[i]);
+      if (!box) continue;
+      var label = box.closest ? box.closest(".clean-check") : null;
+      if (label) {
+        if (box.checked) label.classList.add("is-on");
+        else label.classList.remove("is-on");
+      }
+    }
+    var valueField = $("#cleanValueField");
+    if (valueField) valueField.hidden = readChoice("cleanFill", state.clean.fill) !== "value";
+  }
+
+  function refreshCleanControls() {
+    var ready = !!state.parsed;
+    var button = $("#cleanBtn");
+    /* 没数据时直接不显示：单文件报告里没有原始行可重算，
+       摆一个永远灰着的「清洗」比不摆更像坏了。 */
+    if (button) { button.disabled = !ready; button.hidden = !ready; }
+    var reset = $("#cleanReset");
+    if (reset) reset.disabled = !state.cleaned;
+    var download = $("#cleanDownload");
+    if (download) download.disabled = !state.cleaned;
+  }
+
+  /* 说明行：没洗之前讲「现在有多少数据、点了会怎样」，洗完之后讲「到底动了什么」。
+     这块刻意把前后四个数并排摆出来——用户判断这份数据还能不能用，靠的就是这几个差值。 */
+  function renderCleanNote(report) {
+    var note = $("#cleanNote");
+    if (!note) return;
+    if (!state.parsed) { note.innerHTML = ""; return; }
+    if (!report) {
+      note.innerHTML = "当前 " + intText(state.parsed.rows.length) + " 行 × " +
+        intText(state.parsed.columns.length) + " 列。清洗结果会替换下面的分析，" +
+        "随时可以点「还原原始数据」退回；原始文件始终没被改动。";
+      return;
+    }
+    var before = report.before || {}, after = report.after || {};
+    note.innerHTML = "<b>已应用</b> " + esc((report.options || []).join(" · ") || "未做任何动作") +
+      "。行 " + intText(before.rows) + " → " + intText(after.rows) +
+      " · 缺失 " + intText(before.missing) + " → " + intText(after.missing) +
+      " · 重复 " + intText(before.duplicates) + " → " + intText(after.duplicates) +
+      (report.columns_added ? " · 新增 " + intText(report.columns_added) + " 个标记列" : "") + "。";
+  }
+
+  function cleanToastText(report) {
+    var before = report.before || {}, after = report.after || {};
+    return "已清洗并重新分析：行 " + intText(before.rows) + " → " + intText(after.rows) +
+      "，缺失 " + intText(before.missing) + " → " + intText(after.missing) +
+      (report.columns_added ? "，新增 " + intText(report.columns_added) + " 个标记列" : "");
+  }
+
+  async function applyCleaning() {
+    if (!state.parsed) { toast("请先载入数据"); return; }
+    if (typeof GlassClean === "undefined") {
+      toast("清洗模块没有加载：请刷新页面重试，或用桌面版（双击 main.py）");
+      return;
+    }
+    var options = collectCleanOptions();
+    state.clean = options;
+    var button = $("#cleanApply");
+    if (button) button.disabled = true;
+    setProgress(0.05, "正在清洗 " + intText(state.parsed.rows.length) + " 行…");
+    await yieldToUi();   // 先把进度条画出来，再做同步计算，否则界面像卡住了
+    try {
+      var result = GlassClean.clean(state.parsed.columns, state.parsed.rows, options);
+      state.cleaned = result;
+      await runAnalysis(result.columns, result.rows, state.parsed.name, { cleaning: result.report });
+      renderCleanNote(result.report);
+      setProgress(null);
+      toast(cleanToastText(result.report));
+    } catch (error) {
+      setProgress(null);
+      toast("清洗失败：" + (error && error.message ? error.message : "未知错误"));
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function resetCleaning() {
+    if (!state.parsed) return;
+    state.cleaned = null;
+    await runAnalysis(state.parsed.columns, state.parsed.rows, state.parsed.name);
+    renderCleanNote(null);
+    toast("已还原为原始数据");
+  }
+
+  /* 导出走 BOM + CRLF：双击用 Excel 打开即中文不乱码，
+     这一点和桌面版 write_clean_csv 的 utf-8-sig 是同一个理由。 */
+  function downloadCleanedCsv() {
+    if (!state.cleaned) { toast("请先执行清洗"); return; }
+    if (typeof GlassClean === "undefined") { toast("清洗模块没有加载：请刷新页面重试"); return; }
+    var stats = {};
+    var text = "\ufeff" + GlassClean.toCsv(state.cleaned.columns, state.cleaned.rows, null, stats);
+    var blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    var raw = String((state.parsed && state.parsed.name) || "data");
+    var base = raw.replace(/\.[A-Za-z0-9]+$/, "").replace(/[\\/:*?"<>|\s·]+/g, "_").replace(/^_+|_+$/g, "");
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = (base || "data") + "_清洗后.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(function () { URL.revokeObjectURL(link.href); }, 1200);
+    toast("已导出 " + intText(state.cleaned.rows.length) + " 行清洗后的数据");
+    /* 改了就得说：以 = + - @ 开头的格子被加了单引号，否则 Excel 会当公式执行 */
+    if (stats.escaped) {
+      toast("其中 " + intText(stats.escaped) + " 格以 = + - @ 开头，已加单引号，避免 Excel 当公式执行");
+    }
+  }
+
+  /* 切换日期顺序后原地重算：不需要用户重新选一次文件 */
+  async function flipDateOrder() {
+    if (!state.parsed) { toast("请先载入数据"); return; }
+    state.dateOrder = state.dateOrder === "dmy" ? "mdy" : "dmy";
+    try {
+      await runAnalysis(state.parsed.columns, state.parsed.rows, state.parsed.name);
+      toast("已按「" + (state.dateOrder === "dmy" ? "日/月/年" : "月/日/年") + "」重新解析日期");
+    } catch (error) {
+      toast("重算失败：" + error.message);
+    }
+  }
+
+  /* 站点名与构建版本号（单文件报告里都没有这两样东西）：
+     —— 顶栏标题恒为站点名，文件名交给右侧「来源」标签去显示；
+     —— 页脚显示版本号，便于一眼确认「看到的是哪一版」；
+     —— 版本号还给 demo.csv 当缓存串，否则 CDN / 浏览器缓存可能把
+        「新界面 + 旧示例数据」拼在一起，出现字段名对不上、版式看着不对的怪现状。 */
+  var SITE_NAME = (window.__BUILD__ && window.__BUILD__.v) ? "数据分析工具" : "";
+
+  function buildLabel() {
+    var build = window.__BUILD__;
+    if (!build || !build.v) return "";
+    return "版本 " + build.v;
+  }
+
+  /* 示例数据：站点模式下从同目录的 demo.csv 读取。
+     直接用 file:// 打开单文件报告时没有同目录资源，给出明确提示而不是静默失败。 */
+  function loadDemo() {
+    if (location.protocol === "file:") {
+      toast("本地单文件模式无法读取示例数据，请直接导入 CSV");
+      return Promise.resolve(false);
+    }
+    setProgress(0.01, "正在载入示例数据…");
+    var bust = buildLabel() && window.__BUILD__.v ? "?v=" + encodeURIComponent(window.__BUILD__.v) : "";
+    return fetch("demo.csv" + bust, { cache: "no-cache" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.text();
+      })
+      .then(function (text) { return ingestText(text, "示例订单数据.csv"); })
+      .catch(function () {
+        setProgress(null);
+        toast("示例数据加载失败，请手动导入文件");
+        return false;
+      });
+  }
+
+  $("#fileInput").addEventListener("change", function (event) {
+    if (event.target.files && event.target.files[0]) ingestFile(event.target.files[0]);
+    event.target.value = "";
+  });
+
+  /* 工作表下拉：只在多表工作簿里出现，切换不重新选文件 */
+  var sheetSelect = $("#sheetSelect");
+  if (sheetSelect) {
+    sheetSelect.addEventListener("change", function () {
+      var name = sheetSelect.value;
+      if (name && typeof switchSheet === "function") switchSheet(name);
+    });
+  }
+
+  $("#demoBtn").addEventListener("click", function () { loadDemo(); });
+  var heroDemo = $("#heroDemoBtn");
+  if (heroDemo) heroDemo.addEventListener("click", function () { loadDemo(); });
+
+  /* 清洗面板：开关会展开/收起一整条工作台。
+     用 hidden 属性而不是 display 类，是为了让「收起」这件事对读屏软件也成立。 */
+  (function bindCleanPanel() {
+    var toggle = $("#cleanBtn");
+    if (toggle) toggle.addEventListener("click", function () {
+      if (!state.parsed) { toast("请先导入数据"); return; }
+      var drawer = $("#cleanDrawer");
+      if (!drawer) return;
+      drawer.hidden = !drawer.hidden;
+      if (!drawer.hidden) {
+        syncCleanChecks();
+        renderCleanNote(state.cleaned ? state.cleaned.report : null);
+      }
+    });
+    var close = $("#cleanClose");
+    if (close) close.addEventListener("click", function () {
+      var drawer = $("#cleanDrawer");
+      if (drawer) drawer.hidden = true;
+    });
+    var fill = $("#cleanFill");
+    if (fill) fill.addEventListener("change", syncCleanChecks);
+    var boxes = ["optTrim", "optDropBlank", "optDedupe", "optCoerce"];
+    for (var i = 0; i < boxes.length; i++) {
+      var box = $("#" + boxes[i]);
+      if (box) box.addEventListener("change", syncCleanChecks);
+    }
+    var apply = $("#cleanApply");
+    if (apply) apply.addEventListener("click", function () { applyCleaning(); });
+    var reset = $("#cleanReset");
+    if (reset) reset.addEventListener("click", function () { resetCleaning(); });
+    var download = $("#cleanDownload");
+    if (download) download.addEventListener("click", function () { downloadCleanedCsv(); });
+    syncCleanChecks();
+  })();
+
+  /* 告警条里的「切换日期顺序」与隐私说明都走事件委托，避免按钮重绘后失联 */
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest) return;
+    if (event.target.closest("[data-flip-order]")) { flipDateOrder(); return; }
+    if (event.target.closest("#privacyBtn") || event.target.closest("#privacyBtnFoot")) { openModal(); return; }
+    if (event.target.closest("#modalClose")) { closeModal(); }
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* 处理方式与边界                                                       */
+  /* ------------------------------------------------------------------ */
+  var MODAL_HTML =
+    "<h4>数据去哪儿了</h4>" +
+    "<p>没有去哪儿。文件由浏览器读进内存，解析、统计、绘图全部在本机完成，" +
+    "<strong>不会发起任何上传请求，也不会写入本地存储</strong>。关掉标签页，数据即从内存释放。</p>" +
+    "<p class=\"fine\">本站是纯静态页面，没有后端数据库，因此也不存在「服务端留存副本」这件事。</p>" +
+    "<h4>能读什么</h4>" +
+    "<ul>" +
+    "<li>Excel（.xlsx / .xlsm）、CSV / TSV / TXT / JSON / JSONL，分隔符自动嗅探</li>" +
+    "<li>编码依次尝试 UTF-8、GBK/GB18030、Big5</li>" +
+    "<li>数值支持千分位、货币符号、百分号、会计负数；时间支持 16 种常见写法</li>" +
+    "</ul>" +
+    "<h4>能改什么</h4>" +
+    "<ul>" +
+    "<li>清洗在页面里就能做：去首尾空白、删空行、去重、数字写法归一，外加缺失填补与 IQR 异常值标记</li>" +
+    "<li>清洗改的是内存里的副本，<strong>原始文件一个字节都不动</strong>，随时可以「还原原始数据」</li>" +
+    "<li>洗完整的表能下载成 CSV（UTF-8 带 BOM，Excel 双击打开不乱码）</li>" +
+    "</ul>" +
+    "<h4>读不了什么</h4>" +
+    "<ul>" +
+    "<li><strong>.xls / .ods</strong>——旧版二进制与 ODS 请走桌面版（双击 main.py）；网页版能读 .xlsx / .xlsm</li>" +
+    "<li>多 sheet 合并、合并单元格、多表关联、嵌套 JSON 展开</li>" +
+    "<li>建模与预测——这是分析与清洗工具，不是建模平台</li>" +
+    "</ul>" +
+    "<h4>桌面版多出来的能力</h4>" +
+    "<ul>" +
+    "<li>直接读旧版 .xls 与 .ods，可用 <code>--sheet</code> 指定工作表</li>" +
+    "<li>批量跑：命令行一次处理多个文件，清洗结果直接落盘</li>" +
+    "</ul>" +
+    "<h4>哪些结论要留个心眼</h4>" +
+    "<ul>" +
+    "<li><strong>日期歧义</strong>：01/05/2026 这类写法两种读法都成立，页面会提示并允许一键切换</li>" +
+    "<li><strong>相关性只算皮尔逊系数</strong>，只覆盖前 10 个数值列；非线性关系看不出来</li>" +
+    "<li><strong>类型按取值形态判定</strong>，不看列名；被编码成数字的类别（如 1=男 2=女）会被当成数值</li>" +
+    "<li><strong>超大文件会截断</strong>：单次最多 50 万行，超出部分不参与统计</li>" +
+    "</ul>";
+
+  function openModal() {
+    var modal = $("#modal");
+    if (!modal) return;
+    $("#modalBody").innerHTML = MODAL_HTML;
+    modal.hidden = false;
+  }
+
+  function closeModal() {
+    var modal = $("#modal");
+    if (modal) modal.hidden = true;
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeModal();
+  });
+
+  var dragDepth = 0;
+  window.addEventListener("dragenter", function (event) {
+    if (!event.dataTransfer) return;
+    event.preventDefault();
+    dragDepth++;
+    $("#dropHint").classList.add("on");
+  });
+  window.addEventListener("dragover", function (event) { event.preventDefault(); });
+  window.addEventListener("dragleave", function () {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) $("#dropHint").classList.remove("on");
+  });
+  window.addEventListener("drop", function (event) {
+    event.preventDefault();
+    dragDepth = 0;
+    $("#dropHint").classList.remove("on");
+    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+      ingestFile(event.dataTransfer.files[0]);
+    }
+  });
+
+  /* 窗口尺寸变化后，直方图高度与矩阵格子宽度都要按新的可用空间重算。
+     render() 只做 DOM 重绘（统计结果在 state 里），节流到 120ms 即可 */
+  var resizeTimer = 0;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (state.data) render();
+    }, 120);
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* 启动                                                                */
+  /* ------------------------------------------------------------------ */
+  function boot() {
+    var payload = {};
+    try {
+      payload = JSON.parse($("#payload").textContent || "{}");
+    } catch (error) {
+      payload = {};
+    }
+    if (payload && payload.columns && payload.columns.length) {
+      state.data = payload;
+      state.selected = null;
+      render();
+    } else {
+      renderEmpty();
+      // 便于分享「一键体验」链接：index.html?demo=1 直接载入示例数据
+      if (/[?&]demo=1\b/.test(location.search)) loadDemo();
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
